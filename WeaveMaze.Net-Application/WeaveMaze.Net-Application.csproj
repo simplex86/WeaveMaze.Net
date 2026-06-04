@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>SimplexLab.WeaveMaze.TApplication</RootNamespace>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WeaveMaze.Net\WeaveMaze.Net.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="solution\" />
+  </ItemGroup>
+
+</Project>

@@ -6,7 +6,7 @@ namespace SimplexLab.WeaveMaze
 {
     /// <summary>
     /// 矩形编织式迷宫生成器。
-    /// 算法流程：添加环和交叉 → 区域标记 → 生成生成树 → 求解最长路径
+    /// 算法流程：添加环和交叉 → 区域标记 → 生成生成树
     /// </summary>
     public class RectangularWeaveMazeGenerator
     {
@@ -15,9 +15,6 @@ namespace SimplexLab.WeaveMaze
         /// </summary>
         private static readonly int[][] Permutations = GeneratePermutations();
 
-        /// <summary>
-        /// 
-        /// </summary>
         private readonly Random random;
 
         public RectangularWeaveMazeGenerator()
@@ -53,7 +50,6 @@ namespace SimplexLab.WeaveMaze
             AddLoopsAndCrosses(cells, field.Height, field.Width, field.LoopFrac, field.CrossFrac);
             var regions = AssignRegions(cells, field.Height, field.Width);
             CreateSpanningTree(cells, field.Height, field.Width, regions, field.LongPassages);
-            SolveMaze(cells, field.Height, field.Width);
 
             field.Cells = cells;
             return field;
@@ -825,241 +821,6 @@ namespace SimplexLab.WeaveMaze
             if (index < 0 || index == nodes.Count - 1) return;
             nodes.RemoveAt(index);
             nodes.Add(node);
-        }
-
-        #endregion
-
-        #region 迷宫求解
-
-        /// <summary>
-        /// 求解迷宫：找到边界间最长的路径，并将解路径写入节点的 xxx2 字段。
-        /// </summary>
-        private static void SolveMaze(Cell[][] cells, int height, int width)
-        {
-            var borderNodes = FindBorderNodes(cells, height, width);
-            var bestSolution = new List<Node>();
-
-            foreach (var node in borderNodes)
-            {
-                Flood(node, cells, height, width, borderNodes, bestSolution);
-            }
-
-            WireSolution(bestSolution, cells, height, width);
-        }
-
-        /// <summary>
-        /// 找到迷宫边界上的所有节点
-        /// </summary>
-        private static HashSet<Node> FindBorderNodes(Cell[][] cells, int height, int width)
-        {
-            var borderCells = new HashSet<Cell>();
-
-            // 每列的首尾白色单元格
-            for (int x = width - 1; x >= 0; --x)
-            {
-                for (int y = 0; y < height; ++y)
-                {
-                    if (cells[y][x].White)
-                    {
-                        borderCells.Add(cells[y][x]);
-                        break;
-                    }
-                }
-                for (int y = height - 1; y >= 0; --y)
-                {
-                    if (cells[y][x].White)
-                    {
-                        borderCells.Add(cells[y][x]);
-                        break;
-                    }
-                }
-            }
-
-            // 每行的首尾白色单元格
-            for (int y = height - 1; y >= 0; --y)
-            {
-                for (int x = 0; x < width; ++x)
-                {
-                    if (cells[y][x].White)
-                    {
-                        borderCells.Add(cells[y][x]);
-                        break;
-                    }
-                }
-                for (int x = width - 1; x >= 0; --x)
-                {
-                    if (cells[y][x].White)
-                    {
-                        borderCells.Add(cells[y][x]);
-                        break;
-                    }
-                }
-            }
-
-            var borderNodes = new HashSet<Node>();
-            foreach (var cell in borderCells)
-            {
-                borderNodes.Add(cell.Lower);
-            }
-            return borderNodes;
-        }
-
-        /// <summary>
-        /// 从种子节点进行 BFS，记录距离。当找到比当前最远边界节点更远的边界节点时，更新最优解。
-        /// </summary>
-        private static void Flood(Node seed, Cell[][] cells, int height, int width,
-            HashSet<Node> borderNodes, List<Node> bestSolution)
-        {
-            // 重置 visitedBy
-            for (int y = height - 1; y >= 0; --y)
-            {
-                for (int x = width - 1; x >= 0; --x)
-                {
-                    cells[y][x].Lower.VisitedBy = null;
-                    cells[y][x].Upper.VisitedBy = null;
-                }
-            }
-
-            seed.VisitedBy = seed;
-            seed.Region = 0;
-
-            var queue = new Queue<Node>();
-            queue.Enqueue(seed);
-
-            while (queue.Count > 0)
-            {
-                var node = queue.Dequeue();
-
-                // 如果当前节点是边界节点且距离大于已知最优，更新解
-                if (borderNodes.Contains(node) && node.Region > bestSolution.Count)
-                {
-                    bestSolution.Clear();
-                    var n = node;
-                    while (true)
-                    {
-                        bestSolution.Add(n);
-                        if (n.VisitedBy == null || n.VisitedBy == n) break;
-                        n = n.VisitedBy;
-                    }
-                }
-
-                int nextLength = node.Region + 1;
-
-                TryVisit(node.North);
-                TryVisit(node.East);
-                TryVisit(node.South);
-                TryVisit(node.West);
-
-                void TryVisit(Node? neighbor)
-                {
-                    if (neighbor != null && neighbor.VisitedBy == null)
-                    {
-                        neighbor.VisitedBy = node;
-                        neighbor.Region = nextLength;
-                        queue.Enqueue(neighbor);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// 为解路径的端点标记终端方向（自引用 xxx2）
-        /// </summary>
-        private static void WireTerminal(Cell[][] cells, int height, int width, Node node)
-        {
-            var cell = node.Cell;
-            var permutation = Permutations[Random.Shared.Next(Permutations.Length)];
-
-            for (int i = permutation.Length - 1; i >= 0; --i)
-            {
-                switch (permutation[i])
-                {
-                    case 0: // 北
-                        if (cell.Y == 0 || !cells[cell.Y - 1][cell.X].White)
-                        {
-                            node.North = node.North2 = node;
-                            return;
-                        }
-                        break;
-                    case 1: // 东
-                        if (cell.X == width - 1 || !cells[cell.Y][cell.X + 1].White)
-                        {
-                            node.East = node.East2 = node;
-                            return;
-                        }
-                        break;
-                    case 2: // 南
-                        if (cell.Y == height - 1 || !cells[cell.Y + 1][cell.X].White)
-                        {
-                            node.South = node.South2 = node;
-                            return;
-                        }
-                        break;
-                    default: // 西
-                        if (cell.X == 0 || !cells[cell.Y][cell.X - 1].White)
-                        {
-                            node.West = node.West2 = node;
-                            return;
-                        }
-                        break;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 将解路径写入节点的 xxx2 字段
-        /// </summary>
-        private static void WireSolution(List<Node> solution, Cell[][] cells, int height, int width)
-        {
-            // 清除所有 xxx2 字段
-            for (int y = height - 1; y >= 0; --y)
-            {
-                for (int x = width - 1; x >= 0; --x)
-                {
-                    cells[y][x].Lower.North2 = null;
-                    cells[y][x].Lower.East2 = null;
-                    cells[y][x].Lower.South2 = null;
-                    cells[y][x].Lower.West2 = null;
-                    cells[y][x].Upper.North2 = null;
-                    cells[y][x].Upper.East2 = null;
-                    cells[y][x].Upper.South2 = null;
-                    cells[y][x].Upper.West2 = null;
-                }
-            }
-
-            if (solution.Count == 0) return;
-
-            // 标记路径端点
-            WireTerminal(cells, height, width, solution[0]);
-            WireTerminal(cells, height, width, solution[solution.Count - 1]);
-
-            // 沿路径设置 xxx2 连接
-            for (int i = solution.Count - 2; i >= 0; --i)
-            {
-                var n0 = solution[i];
-                var n1 = solution[i + 1];
-
-                if (n0.North == n1)
-                {
-                    n0.North2 = n1;
-                    n1.South2 = n0;
-                }
-                else if (n0.East == n1)
-                {
-                    n0.East2 = n1;
-                    n1.West2 = n0;
-                }
-                else if (n0.South == n1)
-                {
-                    n0.South2 = n1;
-                    n1.North2 = n0;
-                }
-                else if (n0.West == n1)
-                {
-                    n0.West2 = n1;
-                    n1.East2 = n0;
-                }
-            }
         }
 
         #endregion

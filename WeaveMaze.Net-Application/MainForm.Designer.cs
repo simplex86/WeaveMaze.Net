@@ -90,7 +90,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             canvas.BackColor = Color.White;
             canvas.Location = new Point(3, 3);
             canvas.Name = "canvas";
-            canvas.Size = new Size(811, 692);
+            canvas.Size = new Size(810, 692);
             canvas.TabIndex = 0;
             canvas.TabStop = false;
             canvas.Paint += OnCanvasPaintHandler;
@@ -102,7 +102,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             ClientSize = new Size(1179, 744);
             Controls.Add(splitContainer1);
             Name = "MainForm";
-            Text = "Weave Maze Generator v0.0.1";
+            Text = "Weave Maze Generator v0.1.3";
             splitContainer1.Panel1.ResumeLayout(false);
             splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();

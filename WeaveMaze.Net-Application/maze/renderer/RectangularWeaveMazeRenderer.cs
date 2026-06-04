@@ -1,14 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 
 namespace SimplexLab.WeaveMaze.TApplication
 {
-    internal class RectangularMazeRenderer
+    internal class RectangularWeaveMazeRenderer
     {
         private int width;
         private int height;
         private RectangularWeaveMazeField field;
+        private WeaveMazeSolution solution;
 
         private const float DefaultPassageWidthFrac = 0.7f;
         private const float DefaultLineWidthFrac = 0.15f;
@@ -24,26 +26,36 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private float cursorX, cursorY;
 
-        public RectangularMazeRenderer SetSize(int width, int height)
+        // 解路径方向位掩码：N=0b1000, E=0b0100, S=0b0010, W=0b0001
+        private Dictionary<Cell, int> lowerSolDirs = new();
+        private Dictionary<Cell, int> upperSolDirs = new();
+
+        public RectangularWeaveMazeRenderer SetSize(int width, int height)
         {
             this.width = width;
             this.height = height;
             return this;
         }
 
-        public RectangularMazeRenderer SetField(RectangularWeaveMazeField field)
+        public RectangularWeaveMazeRenderer SetField(RectangularWeaveMazeField field)
         {
             this.field = field;
             return this;
         }
 
-        public RectangularMazeRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
-        public RectangularMazeRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
-        public RectangularMazeRenderer SetRoundedCorners(bool value) { roundedCorners = value; return this; }
-        public RectangularMazeRenderer SetWallColor(Color color) { wallColor = color; return this; }
-        public RectangularMazeRenderer SetSolutionColor(Color color) { solutionColor = color; return this; }
-        public RectangularMazeRenderer SetBackgroundColor(Color color) { backgroundColor = color; return this; }
-        public RectangularMazeRenderer SetShowSolution(bool value) { showSolution = value; return this; }
+        public RectangularWeaveMazeRenderer SetSolution(WeaveMazeSolution solution)
+        {
+            this.solution = solution;
+            return this;
+        }
+
+        public RectangularWeaveMazeRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
+        public RectangularWeaveMazeRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
+        public RectangularWeaveMazeRenderer SetRoundedCorners(bool value) { roundedCorners = value; return this; }
+        public RectangularWeaveMazeRenderer SetWallColor(Color color) { wallColor = color; return this; }
+        public RectangularWeaveMazeRenderer SetSolutionColor(Color color) { solutionColor = color; return this; }
+        public RectangularWeaveMazeRenderer SetBackgroundColor(Color color) { backgroundColor = color; return this; }
+        public RectangularWeaveMazeRenderer SetShowSolution(bool value) { showSolution = value; return this; }
 
         public void Draw(Graphics grap)
         {
@@ -75,6 +87,9 @@ namespace SimplexLab.WeaveMaze.TApplication
 
             float lineW = lineWidthFrac * cellSize;
 
+            // 从 WeaveMazeSolution 构建解路径方向数据
+            BuildSolutionDirs(cells, mazeHeight, mazeWidth);
+
             if (showSolution)
             {
                 using (var solPen = new Pen(solutionColor, lineW))
@@ -94,6 +109,78 @@ namespace SimplexLab.WeaveMaze.TApplication
                 DrawWallPaths(grap, wallPen, cells, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
             }
         }
+
+        #region 解路径方向构建
+
+        /// <summary>
+        /// 从 WeaveMazeSolution.Path 构建每个单元格的解路径方向位掩码。
+        /// lowerSolDirs[cell] = lower 层的解路径方向（N=0b1000, E=0b0100, S=0b0010, W=0b0001）
+        /// upperSolDirs[cell] = upper 层的解路径方向
+        /// </summary>
+        private void BuildSolutionDirs(Cell[][] cells, int height, int width)
+        {
+            lowerSolDirs.Clear();
+            upperSolDirs.Clear();
+
+            var solPath = solution.Path;
+            if (solPath == null || solPath.Count == 0) return;
+
+            // 遍历路径中每对相邻节点，记录方向
+            for (int i = 0; i < solPath.Count - 1; i++)
+            {
+                var n0 = solPath[i];
+                var n1 = solPath[i + 1];
+
+                if (n0.North == n1)
+                {
+                    AddDir(n0, 0b1000);
+                    AddDir(n1, 0b0010);
+                }
+                else if (n0.East == n1)
+                {
+                    AddDir(n0, 0b0100);
+                    AddDir(n1, 0b0001);
+                }
+                else if (n0.South == n1)
+                {
+                    AddDir(n0, 0b0010);
+                    AddDir(n1, 0b1000);
+                }
+                else if (n0.West == n1)
+                {
+                    AddDir(n0, 0b0001);
+                    AddDir(n1, 0b0100);
+                }
+            }
+
+            // 为路径端点添加终端方向（指向迷宫边界外）
+            AddTerminalDir(cells, height, width, solPath[0]);
+            AddTerminalDir(cells, height, width, solPath[solPath.Count - 1]);
+        }
+
+        private void AddDir(Node node, int dir)
+        {
+            var cell = node.Cell;
+            var dict = (node == cell.Upper) ? upperSolDirs : lowerSolDirs;
+            dict.TryGetValue(cell, out int existing);
+            dict[cell] = existing | dir;
+        }
+
+        private void AddTerminalDir(Cell[][] cells, int height, int width, Node node)
+        {
+            var cell = node.Cell;
+            // 找到指向迷宫边界外的方向
+            if (cell.Y == 0 || !cells[cell.Y - 1][cell.X].White)
+                AddDir(node, 0b1000);
+            if (cell.X == width - 1 || !cells[cell.Y][cell.X + 1].White)
+                AddDir(node, 0b0100);
+            if (cell.Y == height - 1 || !cells[cell.Y + 1][cell.X].White)
+                AddDir(node, 0b0010);
+            if (cell.X == 0 || !cells[cell.Y][cell.X - 1].White)
+                AddDir(node, 0b0001);
+        }
+
+        #endregion
 
         #region 路径绘制原语
 
@@ -369,40 +456,44 @@ namespace SimplexLab.WeaveMaze.TApplication
 
                     if (!cell.White) continue;
 
-                    if (cell.Upper.North2 != null)
-                    {
-                        MoveTo(path, ox + dm, oy);
-                        LineTo(path, ox + dm, oy + cellSize);
-                    }
-                    else if (cell.Upper.East2 != null)
-                    {
-                        MoveTo(path, ox, oy + dm);
-                        LineTo(path, ox + cellSize, oy + dm);
-                    }
+                    int lowerDir = lowerSolDirs.TryGetValue(cell, out var ld) ? ld : 0;
+                    int upperDir = upperSolDirs.TryGetValue(cell, out var ud) ? ud : 0;
 
-                    if (cell.Upper.North != null && cell.Lower.East2 != null)
+                    if (cell.Upper.North != null)
                     {
-                        MoveTo(path, ox, oy + dm);
-                        LineTo(path, ox + d0, oy + dm);
-                        MoveTo(path, ox + d1, oy + dm);
-                        LineTo(path, ox + cellSize, oy + dm);
+                        // 南北跨越：upper 层走南北，lower 层走东西
+                        if ((upperDir & 0b1010) != 0)
+                        {
+                            MoveTo(path, ox + dm, oy);
+                            LineTo(path, ox + dm, oy + cellSize);
+                        }
+                        if ((lowerDir & 0b0101) != 0)
+                        {
+                            MoveTo(path, ox, oy + dm);
+                            LineTo(path, ox + d0, oy + dm);
+                            MoveTo(path, ox + d1, oy + dm);
+                            LineTo(path, ox + cellSize, oy + dm);
+                        }
                     }
-                    else if (cell.Upper.East != null && cell.Lower.North2 != null)
+                    else if (cell.Upper.East != null)
                     {
-                        MoveTo(path, ox + dm, oy);
-                        LineTo(path, ox + dm, oy + d0);
-                        MoveTo(path, ox + dm, oy + d1);
-                        LineTo(path, ox + dm, oy + cellSize);
+                        // 东西跨越：upper 层走东西，lower 层走南北
+                        if ((upperDir & 0b0101) != 0)
+                        {
+                            MoveTo(path, ox, oy + dm);
+                            LineTo(path, ox + cellSize, oy + dm);
+                        }
+                        if ((lowerDir & 0b1010) != 0)
+                        {
+                            MoveTo(path, ox + dm, oy);
+                            LineTo(path, ox + dm, oy + d0);
+                            MoveTo(path, ox + dm, oy + d1);
+                            LineTo(path, ox + dm, oy + cellSize);
+                        }
                     }
-                    else if (cell.Upper.North == null && cell.Upper.East == null)
+                    else if (lowerDir != 0)
                     {
-                        var lower = cell.Lower;
-                        int value = (lower.North2 != null ? 0b1000 : 0) |
-                                    (lower.East2 != null ? 0b0100 : 0) |
-                                    (lower.South2 != null ? 0b0010 : 0) |
-                                    (lower.West2 != null ? 0b0001 : 0);
-
-                        DrawSolutionFlat(path, ox, oy, cellSize, dm, value);
+                        DrawSolutionFlat(path, ox, oy, cellSize, dm, lowerDir);
                     }
                 }
             }

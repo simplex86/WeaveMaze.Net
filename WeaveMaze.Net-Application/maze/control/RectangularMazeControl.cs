@@ -19,5 +19,8 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         public int MazeWidth => (int)width.Value;
         public int MazeHeight => (int)height.Value;
+        public double LoopFraction => (double)loopFraction.Value / 100.0;
+        public double CrossFraction => (double)crossFraction.Value / 100.0;
+        public bool LongPassages => longPassages.Checked;
     }
 }

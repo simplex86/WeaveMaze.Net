@@ -32,14 +32,21 @@
             width = new System.Windows.Forms.NumericUpDown();
             height = new System.Windows.Forms.NumericUpDown();
             label2 = new System.Windows.Forms.Label();
+            loopFraction = new System.Windows.Forms.NumericUpDown();
+            label3 = new System.Windows.Forms.Label();
+            crossFraction = new System.Windows.Forms.NumericUpDown();
+            label4 = new System.Windows.Forms.Label();
+            longPassages = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)width).BeginInit();
             ((System.ComponentModel.ISupportInitialize)height).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)loopFraction).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)crossFraction).BeginInit();
             SuspendLayout();
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new System.Drawing.Point(0, 0);
+            label1.Location = new System.Drawing.Point(3, 5);
             label1.Name = "label1";
             label1.Size = new System.Drawing.Size(42, 17);
             label1.TabIndex = 0;
@@ -48,32 +55,85 @@
             // width
             // 
             width.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-            width.Location = new System.Drawing.Point(92, -2);
+            width.Location = new System.Drawing.Point(100, 3);
             width.Name = "width";
-            width.Size = new System.Drawing.Size(168, 23);
+            width.Size = new System.Drawing.Size(160, 23);
             width.TabIndex = 1;
             // 
             // height
             // 
             height.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-            height.Location = new System.Drawing.Point(92, 27);
+            height.Location = new System.Drawing.Point(100, 32);
             height.Name = "height";
-            height.Size = new System.Drawing.Size(168, 23);
+            height.Size = new System.Drawing.Size(160, 23);
             height.TabIndex = 3;
             // 
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new System.Drawing.Point(0, 29);
+            label2.Location = new System.Drawing.Point(3, 34);
             label2.Name = "label2";
             label2.Size = new System.Drawing.Size(46, 17);
             label2.TabIndex = 2;
             label2.Text = "Height";
             // 
+            // loopFraction
+            // 
+            loopFraction.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            loopFraction.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
+            loopFraction.Location = new System.Drawing.Point(100, 61);
+            loopFraction.Name = "loopFraction";
+            loopFraction.Size = new System.Drawing.Size(160, 23);
+            loopFraction.TabIndex = 5;
+            loopFraction.Value = new decimal(new int[] { 50, 0, 0, 0 });
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new System.Drawing.Point(3, 63);
+            label3.Name = "label3";
+            label3.Size = new System.Drawing.Size(92, 17);
+            label3.TabIndex = 4;
+            label3.Text = "Loop  Fraction";
+            // 
+            // crossFraction
+            // 
+            crossFraction.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            crossFraction.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
+            crossFraction.Location = new System.Drawing.Point(100, 90);
+            crossFraction.Name = "crossFraction";
+            crossFraction.Size = new System.Drawing.Size(160, 23);
+            crossFraction.TabIndex = 7;
+            crossFraction.Value = new decimal(new int[] { 50, 0, 0, 0 });
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Location = new System.Drawing.Point(3, 92);
+            label4.Name = "label4";
+            label4.Size = new System.Drawing.Size(91, 17);
+            label4.TabIndex = 6;
+            label4.Text = "Cross Fraction";
+            // 
+            // longPassages
+            // 
+            longPassages.AutoSize = true;
+            longPassages.Location = new System.Drawing.Point(3, 119);
+            longPassages.Name = "longPassages";
+            longPassages.Size = new System.Drawing.Size(114, 21);
+            longPassages.TabIndex = 9;
+            longPassages.Text = "Long Passages";
+            longPassages.UseVisualStyleBackColor = true;
+            // 
             // RectangularMazeControl
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            Controls.Add(longPassages);
+            Controls.Add(crossFraction);
+            Controls.Add(label4);
+            Controls.Add(loopFraction);
+            Controls.Add(label3);
             Controls.Add(height);
             Controls.Add(label2);
             Controls.Add(width);
@@ -82,6 +142,8 @@
             Size = new System.Drawing.Size(260, 150);
             ((System.ComponentModel.ISupportInitialize)width).EndInit();
             ((System.ComponentModel.ISupportInitialize)height).EndInit();
+            ((System.ComponentModel.ISupportInitialize)loopFraction).EndInit();
+            ((System.ComponentModel.ISupportInitialize)crossFraction).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -92,5 +154,10 @@
         private System.Windows.Forms.NumericUpDown width;
         private System.Windows.Forms.NumericUpDown height;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.NumericUpDown loopFraction;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.NumericUpDown crossFraction;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.CheckBox longPassages;
     }
 }

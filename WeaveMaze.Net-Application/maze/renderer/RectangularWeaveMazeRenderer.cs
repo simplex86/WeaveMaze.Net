@@ -13,7 +13,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private WeaveMazeSolution solution;
 
         private const float DefaultPassageWidthFrac = 0.7f;
-        private const float DefaultLineWidthFrac = 0.15f;
+        private const float DefaultLineWidthFrac = 0.05f;
         private const bool DefaultRoundedCorners = true;
 
         private float passageWidthFrac = DefaultPassageWidthFrac;
@@ -30,25 +30,9 @@ namespace SimplexLab.WeaveMaze.TApplication
         private Dictionary<Cell, int> lowerSolDirs = new();
         private Dictionary<Cell, int> upperSolDirs = new();
 
-        public RectangularWeaveMazeRenderer SetSize(int width, int height)
-        {
-            this.width = width;
-            this.height = height;
-            return this;
-        }
-
-        public RectangularWeaveMazeRenderer SetField(RectangularWeaveMazeField field)
-        {
-            this.field = field;
-            return this;
-        }
-
-        public RectangularWeaveMazeRenderer SetSolution(WeaveMazeSolution solution)
-        {
-            this.solution = solution;
-            return this;
-        }
-
+        public RectangularWeaveMazeRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
+        public RectangularWeaveMazeRenderer SetField(RectangularWeaveMazeField field) { this.field = field; return this; }
+        public RectangularWeaveMazeRenderer SetSolution(WeaveMazeSolution solution) { this.solution = solution; return this; }
         public RectangularWeaveMazeRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
         public RectangularWeaveMazeRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
         public RectangularWeaveMazeRenderer SetRoundedCorners(bool value) { roundedCorners = value; return this; }
@@ -62,18 +46,18 @@ namespace SimplexLab.WeaveMaze.TApplication
             var cells = field.Cells;
             if (cells == null) return;
 
-            int mazeHeight = field.Height;
-            int mazeWidth = field.Width;
+            var mazeHeight = field.Height;
+            var mazeWidth  = field.Width;
 
-            float cellSize = Math.Min((float)width / mazeWidth, (float)height / mazeHeight);
-            float offsetX = ((float)width - cellSize * mazeWidth) / 2;
-            float offsetY = ((float)height - cellSize * mazeHeight) / 2;
+            var cellSize = Math.Min((float)width / mazeWidth, (float)height / mazeHeight);
+            var offsetX = ((float)width - cellSize * mazeWidth) / 2;
+            var offsetY = ((float)height - cellSize * mazeHeight) / 2;
 
-            float cellMarginFrac = (1 - passageWidthFrac) / 2;
-            float d0 = cellMarginFrac * cellSize;
-            float d1 = (1 - cellMarginFrac) * cellSize;
-            float dm = cellSize / 2;
-            float r0 = (d1 - d0) / 2;
+            var cellMarginFrac = (1 - passageWidthFrac) / 2;
+            var d0 = cellMarginFrac * cellSize;
+            var d1 = (1 - cellMarginFrac) * cellSize;
+            var dm = cellSize / 2;
+            var r0 = (d1 - d0) / 2;
 
             grap.SmoothingMode = SmoothingMode.AntiAlias;
             grap.PixelOffsetMode = PixelOffsetMode.Half;
@@ -85,7 +69,7 @@ namespace SimplexLab.WeaveMaze.TApplication
 
             grap.TranslateTransform(offsetX, offsetY);
 
-            float lineW = lineWidthFrac * cellSize;
+            var lineW = lineWidthFrac * cellSize;
 
             // 从 WeaveMazeSolution 构建解路径方向数据
             BuildSolutionDirs(cells, mazeHeight, mazeWidth);
@@ -207,34 +191,34 @@ namespace SimplexLab.WeaveMaze.TApplication
                 return;
             }
 
-            float dx1 = x1 - cursorX;
-            float dy1 = y1 - cursorY;
-            float len1 = (float)Math.Sqrt(dx1 * dx1 + dy1 * dy1);
+            var dx1 = x1 - cursorX;
+            var dy1 = y1 - cursorY;
+            var len1 = (float)Math.Sqrt(dx1 * dx1 + dy1 * dy1);
             if (len1 < 0.001f) { MoveTo(path, x2, y2); return; }
             dx1 /= len1; dy1 /= len1;
 
-            float dx2 = x2 - x1;
-            float dy2 = y2 - y1;
-            float len2 = (float)Math.Sqrt(dx2 * dx2 + dy2 * dy2);
+            var dx2 = x2 - x1;
+            var dy2 = y2 - y1;
+            var len2 = (float)Math.Sqrt(dx2 * dx2 + dy2 * dy2);
             if (len2 < 0.001f) { LineTo(path, x1, y1); return; }
             dx2 /= len2; dy2 /= len2;
 
             if (radius > len1) radius = len1;
             if (radius > len2) radius = len2;
 
-            float t1x = x1 - dx1 * radius;
-            float t1y = y1 - dy1 * radius;
-            float t2x = x1 + dx2 * radius;
-            float t2y = y1 + dy2 * radius;
+            var t1x = x1 - dx1 * radius;
+            var t1y = y1 - dy1 * radius;
+            var t2x = x1 + dx2 * radius;
+            var t2y = y1 + dy2 * radius;
 
-            float cx = x1 + radius * (dx2 - dx1);
-            float cy = y1 + radius * (dy2 - dy1);
+            var cx = x1 + radius * (dx2 - dx1);
+            var cy = y1 + radius * (dy2 - dy1);
 
             path.AddLine(cursorX, cursorY, t1x, t1y);
 
-            float startAngle = (float)Math.Atan2(t1y - cy, t1x - cx) * 180f / (float)Math.PI;
-            float endAngle = (float)Math.Atan2(t2y - cy, t2x - cx) * 180f / (float)Math.PI;
-            float sweep = endAngle - startAngle;
+            var startAngle = (float)Math.Atan2(t1y - cy, t1x - cx) * 180f / (float)Math.PI;
+            var endAngle   = (float)Math.Atan2(t2y - cy, t2x - cx) * 180f / (float)Math.PI;
+            var sweep = endAngle - startAngle;
             if (sweep > 180) sweep -= 360;
             if (sweep < -180) sweep += 360;
 
@@ -248,17 +232,25 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         #region 墙壁绘制
 
-        private void DrawWallPaths(Graphics grap, Pen pen, Cell[][] cells, int mazeHeight, int mazeWidth,
-            float cellSize, float d0, float d1, float dm, float r0)
+        private void DrawWallPaths(Graphics grap, 
+                                   Pen pen, 
+                                   Cell[][] cells, 
+                                   int mazeHeight, 
+                                   int mazeWidth,
+                                   float cellSize, 
+                                   float d0, 
+                                   float d1, 
+                                   float dm, 
+                                   float r0)
         {
             var path = new GraphicsPath();
 
             for (int i = 0; i < mazeHeight; i++)
             {
-                float oy = i * cellSize;
+                var oy = i * cellSize;
                 for (int j = 0; j < mazeWidth; j++)
                 {
-                    float ox = j * cellSize;
+                    var ox = j * cellSize;
                     var cell = cells[i][j];
 
                     if (!cell.White) continue;
@@ -275,9 +267,9 @@ namespace SimplexLab.WeaveMaze.TApplication
                     {
                         var lower = cell.Lower;
                         int value = (lower.North != null ? 0b1000 : 0) |
-                                    (lower.East != null ? 0b0100 : 0) |
+                                    (lower.East  != null ? 0b0100 : 0) |
                                     (lower.South != null ? 0b0010 : 0) |
-                                    (lower.West != null ? 0b0001 : 0);
+                                    (lower.West  != null ? 0b0001 : 0);
 
                         DrawWallFlat(path, ox, oy, cellSize, d0, d1, dm, r0, value);
                     }
@@ -319,8 +311,15 @@ namespace SimplexLab.WeaveMaze.TApplication
             LineTo(path, ox + d1, oy + cellSize);
         }
 
-        private void DrawWallFlat(GraphicsPath path, float ox, float oy, float cellSize,
-            float d0, float d1, float dm, float r0, int value)
+        private void DrawWallFlat(GraphicsPath path, 
+                                  float ox, 
+                                  float oy, 
+                                  float cellSize,
+                                  float d0, 
+                                  float d1, 
+                                  float dm, 
+                                  float r0, 
+                                  int value)
         {
             switch (value)
             {
@@ -441,23 +440,31 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         #region 解路径绘制
 
-        private void DrawSolutionPaths(Graphics grap, Pen pen, Cell[][] cells, int mazeHeight, int mazeWidth,
-            float cellSize, float d0, float d1, float dm, float r0)
+        private void DrawSolutionPaths(Graphics grap,
+                                       Pen pen, 
+                                       Cell[][] cells, 
+                                       int mazeHeight, 
+                                       int mazeWidth,
+                                       float cellSize, 
+                                       float d0, 
+                                       float d1, 
+                                       float dm, 
+                                       float r0)
         {
             var path = new GraphicsPath();
 
             for (int i = 0; i < mazeHeight; i++)
             {
-                float oy = i * cellSize;
+                var oy = i * cellSize;
                 for (int j = 0; j < mazeWidth; j++)
                 {
-                    float ox = j * cellSize;
+                    var ox = j * cellSize;
                     var cell = cells[i][j];
 
                     if (!cell.White) continue;
 
-                    int lowerDir = lowerSolDirs.TryGetValue(cell, out var ld) ? ld : 0;
-                    int upperDir = upperSolDirs.TryGetValue(cell, out var ud) ? ud : 0;
+                    var lowerDir = lowerSolDirs.TryGetValue(cell, out var ld) ? ld : 0;
+                    var upperDir = upperSolDirs.TryGetValue(cell, out var ud) ? ud : 0;
 
                     if (cell.Upper.North != null)
                     {

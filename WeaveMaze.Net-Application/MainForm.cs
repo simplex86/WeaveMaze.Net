@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -50,13 +51,7 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void OnCanvasPaintHandler(object sender, PaintEventArgs e)
         {
-            var renderer = new RectangularWeaveMazeRenderer();
-            renderer.SetSize(canvas.Width, canvas.Height)
-                    .SetField(mazeField)
-                    .SetSolution(mazeSolution)
-                    .SetShowSolution(showSolution.Checked)
-                    .SetRoundedCorners(showRoundedCorners.Checked)
-                    .Draw(e.Graphics);
+            DrawRectangularWeaveMaze(e.Graphics);
         }
 
         private void OnShowSolutionChanged(object sender, System.EventArgs e)
@@ -89,6 +84,17 @@ namespace SimplexLab.WeaveMaze.TApplication
 
             var solutionGenerator = new WeaveMazeSolutionGenerator();
             mazeSolution = solutionGenerator.Generate(mazeField);
+        }
+
+        private void DrawRectangularWeaveMaze(Graphics grap)
+        {
+            var renderer = new RectangularWeaveMazeRenderer();
+            renderer.SetSize(canvas.Width, canvas.Height)
+                    .SetField(mazeField)
+                    .SetSolution(mazeSolution)
+                    .SetShowSolution(showSolution.Checked)
+                    .SetRoundedCorners(showRoundedCorners.Checked)
+                    .Draw(grap);
         }
 
         #endregion

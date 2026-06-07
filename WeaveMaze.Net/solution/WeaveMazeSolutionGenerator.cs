@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SimplexLab.WeaveMaze
 {
@@ -12,9 +13,10 @@ namespace SimplexLab.WeaveMaze
         private static readonly int[][] Permutations = GeneratePermutations();
 
         /// <summary>
-        /// 为已生成的迷宫求解，返回解法数据。
-        /// 解路径同时写入节点的 xxx2 字段。
+        /// 为已生成的迷宫求解，返回解法数据
         /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
         public WeaveMazeSolution Generate(RectangularWeaveMazeField field)
         {
             var cells = field.Cells;
@@ -37,6 +39,16 @@ namespace SimplexLab.WeaveMaze
             WireSolution(bestSolution, cells, height, width);
 
             return new WeaveMazeSolution { Path = bestSolution };
+        }
+
+        /// <summary>
+        /// 为已生成的迷宫求解，返回解法数据
+        /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public async Task<WeaveMazeSolution> GenerateAsync(RectangularWeaveMazeField field)
+        {
+            return await Task.Run(() => Generate(field));
         }
 
         #region 边界节点查找

@@ -73,16 +73,16 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 根据字段参数创建单元格数组
         /// </summary>
-        private static Cell[][] CreateCells(RectangularWeaveMazeField field)
+        private static SquareCell[][] CreateCells(RectangularWeaveMazeField field)
         {
-            var cells = new Cell[field.Height][];
+            var cells = new SquareCell[field.Height][];
             for (int i = field.Height - 1; i >= 0; --i)
             {
-                cells[i] = new Cell[field.Width];
+                cells[i] = new SquareCell[field.Width];
                 for (int j = field.Width - 1; j >= 0; --j)
                 {
                     bool white = field.Mask != null ? field.Mask[i][j] : true;
-                    cells[i][j] = new Cell(j, i, white);
+                    cells[i][j] = new SquareCell(j, i, white);
                 }
             }
             return cells;
@@ -96,10 +96,10 @@ namespace SimplexLab.WeaveMaze
         /// 在迷宫中添加环（Loop）和交叉（Cross）结构，形成编织式迷宫的跨越特征。
         /// 先添加环，再添加交叉。每次添加后验证不产生图论环路，否则回滚。
         /// </summary>
-        private void AddLoopsAndCrosses(Cell[][] cells, int height, int width, double loopFraction, double crossFraction)
+        private void AddLoopsAndCrosses(SquareCell[][] cells, int height, int width, double loopFraction, double crossFraction)
         {
             // 收集内部可用单元格（排除边界，因为环和交叉需要四方向邻居）
-            var cellList = new List<Cell>();
+            var cellList = new List<SquareCell>();
             for (int i = height - 2; i >= 1; --i)
             {
                 for (int j = width - 2; j >= 1; --j)
@@ -174,7 +174,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 尝试添加指定方向的环
         /// </summary>
-        private bool TryAddLoop(Cell[][] cells, int height, int width, Cell cell, int direction, bool northSouthHopsEastWest)
+        private bool TryAddLoop(SquareCell[][] cells, int height, int width, SquareCell cell, int direction, bool northSouthHopsEastWest)
         {
             return direction switch
             {
@@ -188,7 +188,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 添加东北方向环
         /// </summary>
-        private bool AddNorthEastLoop(Cell[][] cells, Cell cell, bool northSouthHopsEastWest)
+        private bool AddNorthEastLoop(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
         {
             var northCell = cells[cell.Y - 1][cell.X];
             if (!northCell.White || northCell.IsNotFlat()) return false;
@@ -242,7 +242,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 添加东南方向环
         /// </summary>
-        private bool AddSouthEastLoop(Cell[][] cells, Cell cell, bool northSouthHopsEastWest)
+        private bool AddSouthEastLoop(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
         {
             var southCell = cells[cell.Y + 1][cell.X];
             if (!southCell.White || southCell.IsNotFlat()) return false;
@@ -296,7 +296,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 添加西南方向环
         /// </summary>
-        private bool AddSouthWestLoop(Cell[][] cells, Cell cell, bool northSouthHopsEastWest)
+        private bool AddSouthWestLoop(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
         {
             var southCell = cells[cell.Y + 1][cell.X];
             if (!southCell.White || southCell.IsNotFlat()) return false;
@@ -350,7 +350,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 添加西北方向环
         /// </summary>
-        private bool AddNorthWestLoop(Cell[][] cells, Cell cell, bool northSouthHopsEastWest)
+        private bool AddNorthWestLoop(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
         {
             var northCell = cells[cell.Y - 1][cell.X];
             if (!northCell.White || northCell.IsNotFlat()) return false;
@@ -404,7 +404,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 添加十字交叉
         /// </summary>
-        private bool AddCross(Cell[][] cells, Cell cell, bool northSouthHopsEastWest)
+        private bool AddCross(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
         {
             var northCell = cells[cell.Y - 1][cell.X];
             if (!northCell.White) return false;
@@ -444,7 +444,7 @@ namespace SimplexLab.WeaveMaze
         /// 当 northSouthHopsEastWest 为 true 时，南北通道走上层（跨越东西通道）；
         /// 为 false 时，东西通道走上层（跨越南北通道）。
         /// </summary>
-        private static void WireCross(Cell cell, Cell northCell, Cell eastCell, Cell southCell, Cell westCell,
+        private static void WireCross(SquareCell cell, SquareCell northCell, SquareCell eastCell, SquareCell southCell, SquareCell westCell,
             bool northSouthHopsEastWest)
         {
             if (northSouthHopsEastWest)
@@ -541,7 +541,7 @@ namespace SimplexLab.WeaveMaze
         /// 从种子节点出发，检测图中是否存在图论环路（非树边）。
         /// 使用 DFS，visitedBy 记录父节点。若遇到已访问且非父节点的邻居，则存在环路。
         /// </summary>
-        private static bool FindLoop(Cell[][] cells, Node seed)
+        private static bool FindLoop(SquareCell[][] cells, SquareNode seed)
         {
             int height = cells.Length;
             int width = cells[0].Length;
@@ -557,7 +557,7 @@ namespace SimplexLab.WeaveMaze
             }
 
             seed.VisitedBy = seed;
-            var stack = new List<Node> { seed };
+            var stack = new List<SquareNode> { seed };
             int stackIndex = stack.Count - 1;
 
             while (stackIndex >= 0)
@@ -577,7 +577,7 @@ namespace SimplexLab.WeaveMaze
 
             return false;
 
-            bool CheckNeighbor(Node? neighbor, Node parent)
+            bool CheckNeighbor(SquareNode? neighbor, SquareNode parent)
             {
                 if (neighbor == null) return false;
                 if (neighbor.VisitedBy != null)
@@ -600,9 +600,9 @@ namespace SimplexLab.WeaveMaze
         /// 为所有节点分配区域标识。通过 DFS 洪水填充，沿节点的四方向连接遍历，
         /// 连通的节点分配相同的区域 ID。返回按区域 ID 索引的节点列表。
         /// </summary>
-        private static List<Node[]> AssignRegions(Cell[][] cells, int height, int width)
+        private static List<SquareNode[]> AssignRegions(SquareCell[][] cells, int height, int width)
         {
-            var regionNodes = new List<Node[]>();
+            var regionNodes = new List<SquareNode[]>();
             int regionId = 0;
 
             for (int i = height - 1; i >= 0; --i)
@@ -635,13 +635,13 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 从种子节点出发，DFS 填充同一区域的所有节点
         /// </summary>
-        private static Node[] AssignRegion(int region, Node seed)
+        private static SquareNode[] AssignRegion(int region, SquareNode seed)
         {
-            var nodes = new List<Node>();
+            var nodes = new List<SquareNode>();
             seed.Region = region;
             nodes.Add(seed);
 
-            var stack = new List<Node> { seed };
+            var stack = new List<SquareNode> { seed };
             while (stack.Count > 0)
             {
                 int last = stack.Count - 1;
@@ -656,7 +656,7 @@ namespace SimplexLab.WeaveMaze
 
             return nodes.ToArray();
 
-            void TryEnqueue(Node? neighbor)
+            void TryEnqueue(SquareNode? neighbor)
             {
                 if (neighbor != null && neighbor.Region < 0)
                 {
@@ -675,13 +675,13 @@ namespace SimplexLab.WeaveMaze
         /// 使用随机化 Kruskal 算法变体生成生成树，将所有区域连通。
         /// longCorridors 为 true 时使用 Hunt-and-Kill 变体，生成更长的通道。
         /// </summary>
-        private void CreateSpanningTree(Cell[][] cells, int height, int width, List<Node[]> regions, bool longCorridors)
+        private void CreateSpanningTree(SquareCell[][] cells, int height, int width, List<SquareNode[]> regions, bool longCorridors)
         {
             int maxX = width - 1;
             int maxY = height - 1;
 
             // 收集可扩展节点：upper 节点没有 north 和 east 连接的 lower 节点
-            var nodes = new List<Node>();
+            var nodes = new List<SquareNode>();
             for (int i = maxY; i >= 0; --i)
             {
                 for (int j = maxX; j >= 0; --j)
@@ -798,7 +798,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 合并两个区域：将 region1 的所有节点归入 region2
         /// </summary>
-        private static void MergeRegions(int region1, int region2, List<Node[]> regions)
+        private static void MergeRegions(int region1, int region2, List<SquareNode[]> regions)
         {
             var region1Nodes = regions[region1];
             var region2Nodes = regions[region2];
@@ -807,15 +807,15 @@ namespace SimplexLab.WeaveMaze
                 region1Nodes[i].Region = region2;
             }
             // 将 region1 的节点追加到 region2，并清空 region1
-            var merged = new Node[region2Nodes.Length + region1Nodes.Length];
+            var merged = new SquareNode[region2Nodes.Length + region1Nodes.Length];
             region2Nodes.CopyTo(merged, 0);
             region1Nodes.CopyTo(merged, region2Nodes.Length);
             regions[region2] = merged;
-            regions[region1] = Array.Empty<Node>();
+            regions[region1] = Array.Empty<SquareNode>();
         }
 
         /// <summary>将节点移到列表末尾（用于长通道模式）</summary>
-        private static void MoveToEnd(List<Node> nodes, Node node)
+        private static void MoveToEnd(List<SquareNode> nodes, SquareNode node)
         {
             int index = nodes.IndexOf(node);
             if (index < 0 || index == nodes.Count - 1) return;

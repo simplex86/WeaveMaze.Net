@@ -9,7 +9,7 @@ namespace SimplexLab.WeaveMaze
     public struct WeaveMazeSolution
     {
         /// <summary>解路径上的节点列表（从起点到终点）</summary>
-        public List<Node> Path { get; set; }
+        public List<SquareNode> Path { get; set; }
 
         /// <summary>解路径长度（节点数）</summary>
         public int Length => Path?.Count ?? 0;

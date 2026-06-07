@@ -76,7 +76,7 @@ namespace SimplexLab.WeaveMaze
         /// 每个单元格的 Lower 和 Upper 节点的四方向连接（North/East/South/West）
         /// 描述了迷宫的通道结构；xxx2 字段描述了解路径。
         /// </summary>
-        public Cell[][]? Cells { get; set; }
+        public SquareCell[][]? Cells { get; set; }
 
         #endregion
 

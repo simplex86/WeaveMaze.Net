@@ -27,8 +27,8 @@ namespace SimplexLab.WeaveMaze.TApplication
         private float cursorX, cursorY;
 
         // 解路径方向位掩码：N=0b1000, E=0b0100, S=0b0010, W=0b0001
-        private Dictionary<Cell, int> lowerSolDirs = new();
-        private Dictionary<Cell, int> upperSolDirs = new();
+        private Dictionary<SquareCell, int> lowerSolDirs = new();
+        private Dictionary<SquareCell, int> upperSolDirs = new();
 
         public RectangularWeaveMazeRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
         public RectangularWeaveMazeRenderer SetField(RectangularWeaveMazeField field) { this.field = field; return this; }
@@ -101,7 +101,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         /// lowerSolDirs[cell] = lower 层的解路径方向（N=0b1000, E=0b0100, S=0b0010, W=0b0001）
         /// upperSolDirs[cell] = upper 层的解路径方向
         /// </summary>
-        private void BuildSolutionDirs(Cell[][] cells, int height, int width)
+        private void BuildSolutionDirs(SquareCell[][] cells, int height, int width)
         {
             lowerSolDirs.Clear();
             upperSolDirs.Clear();
@@ -142,7 +142,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             AddTerminalDir(cells, height, width, solPath[solPath.Count - 1]);
         }
 
-        private void AddDir(Node node, int dir)
+        private void AddDir(SquareNode node, int dir)
         {
             var cell = node.Cell;
             var dict = (node == cell.Upper) ? upperSolDirs : lowerSolDirs;
@@ -150,7 +150,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             dict[cell] = existing | dir;
         }
 
-        private void AddTerminalDir(Cell[][] cells, int height, int width, Node node)
+        private void AddTerminalDir(SquareCell[][] cells, int height, int width, SquareNode node)
         {
             var cell = node.Cell;
             // 找到指向迷宫边界外的方向
@@ -234,7 +234,7 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void DrawWallPaths(Graphics grap, 
                                    Pen pen, 
-                                   Cell[][] cells, 
+                                   SquareCell[][] cells, 
                                    int mazeHeight, 
                                    int mazeWidth,
                                    float cellSize, 
@@ -442,7 +442,7 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void DrawSolutionPaths(Graphics grap,
                                        Pen pen, 
-                                       Cell[][] cells, 
+                                       SquareCell[][] cells, 
                                        int mazeHeight, 
                                        int mazeWidth,
                                        float cellSize, 

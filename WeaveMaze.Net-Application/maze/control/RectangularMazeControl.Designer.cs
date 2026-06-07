@@ -85,7 +85,7 @@
             loopFraction.Name = "loopFraction";
             loopFraction.Size = new System.Drawing.Size(160, 23);
             loopFraction.TabIndex = 5;
-            loopFraction.Value = new decimal(new int[] { 50, 0, 0, 0 });
+            loopFraction.Value = new decimal(new int[] { 5, 0, 0, 0 });
             // 
             // label3
             // 
@@ -104,7 +104,7 @@
             crossFraction.Name = "crossFraction";
             crossFraction.Size = new System.Drawing.Size(160, 23);
             crossFraction.TabIndex = 7;
-            crossFraction.Value = new decimal(new int[] { 50, 0, 0, 0 });
+            crossFraction.Value = new decimal(new int[] { 25, 0, 0, 0 });
             // 
             // label4
             // 

@@ -119,10 +119,10 @@ namespace SimplexLab.WeaveMaze.TApplication
             // 
             canvas.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             canvas.BackColor = Color.White;
-            canvas.Location = new Point(2, 2);
+            canvas.Location = new Point(2, 3);
             canvas.Margin = new Padding(2);
             canvas.Name = "canvas";
-            canvas.Size = new Size(522, 496);
+            canvas.Size = new Size(516, 495);
             canvas.TabIndex = 0;
             canvas.TabStop = false;
             canvas.Paint += OnCanvasPaintHandler;

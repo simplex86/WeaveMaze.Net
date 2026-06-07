@@ -20,14 +20,14 @@ namespace SimplexLab.WeaveMaze
             var cells = field.Cells;
             if (cells == null)
             {
-                return new WeaveMazeSolution { Path = new List<Node>() };
+                return new WeaveMazeSolution { Path = new List<SquareNode>() };
             }
 
             int height = field.Height;
             int width = field.Width;
 
             var borderNodes = FindBorderNodes(cells, height, width);
-            var bestSolution = new List<Node>();
+            var bestSolution = new List<SquareNode>();
 
             foreach (var node in borderNodes)
             {
@@ -44,9 +44,9 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 找到迷宫边界上的所有节点
         /// </summary>
-        private static HashSet<Node> FindBorderNodes(Cell[][] cells, int height, int width)
+        private static HashSet<SquareNode> FindBorderNodes(SquareCell[][] cells, int height, int width)
         {
-            var borderCells = new HashSet<Cell>();
+            var borderCells = new HashSet<SquareCell>();
 
             // 每列的首尾白色单元格
             for (int x = width - 1; x >= 0; --x)
@@ -90,7 +90,7 @@ namespace SimplexLab.WeaveMaze
                 }
             }
 
-            var borderNodes = new HashSet<Node>();
+            var borderNodes = new HashSet<SquareNode>();
             foreach (var cell in borderCells)
             {
                 borderNodes.Add(cell.Lower);
@@ -105,8 +105,8 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 从种子节点进行 BFS，记录距离。当找到比当前最远边界节点更远的边界节点时，更新最优解。
         /// </summary>
-        private static void Flood(Node seed, Cell[][] cells, int height, int width,
-            HashSet<Node> borderNodes, List<Node> bestSolution)
+        private static void Flood(SquareNode seed, SquareCell[][] cells, int height, int width,
+            HashSet<SquareNode> borderNodes, List<SquareNode> bestSolution)
         {
             // 重置 visitedBy
             for (int y = height - 1; y >= 0; --y)
@@ -121,7 +121,7 @@ namespace SimplexLab.WeaveMaze
             seed.VisitedBy = seed;
             seed.Region = 0;
 
-            var queue = new Queue<Node>();
+            var queue = new Queue<SquareNode>();
             queue.Enqueue(seed);
 
             while (queue.Count > 0)
@@ -148,7 +148,7 @@ namespace SimplexLab.WeaveMaze
                 TryVisit(node.South);
                 TryVisit(node.West);
 
-                void TryVisit(Node? neighbor)
+                void TryVisit(SquareNode? neighbor)
                 {
                     if (neighbor != null && neighbor.VisitedBy == null)
                     {
@@ -167,7 +167,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 将解路径写入节点的 xxx2 字段
         /// </summary>
-        private static void WireSolution(List<Node> solution, Cell[][] cells, int height, int width)
+        private static void WireSolution(List<SquareNode> solution, SquareCell[][] cells, int height, int width)
         {
             // 清除所有 xxx2 字段
             for (int y = height - 1; y >= 0; --y)
@@ -223,7 +223,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 为解路径的端点标记终端方向（同时设置 xxx 和 xxx2 为自引用）
         /// </summary>
-        private static void WireTerminal(Cell[][] cells, int height, int width, Node node)
+        private static void WireTerminal(SquareCell[][] cells, int height, int width, SquareNode node)
         {
             var cell = node.Cell;
             var permutation = Permutations[Random.Shared.Next(Permutations.Length)];

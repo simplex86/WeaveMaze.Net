@@ -4,42 +4,42 @@ namespace SimplexLab.WeaveMaze
     /// 迷宫节点。每个单元格包含 lower（下层）和 upper（上层）两个节点，
     /// 上层节点用于表示编织式迷宫中通道跨越时的架空通道。
     /// </summary>
-    public class Node
+    public class SquareNode
     {
         /// <summary>北向连接</summary>
-        public Node? North { get; set; }
+        public SquareNode? North { get; set; }
 
         /// <summary>东向连接</summary>
-        public Node? East { get; set; }
+        public SquareNode? East { get; set; }
 
         /// <summary>南向连接</summary>
-        public Node? South { get; set; }
+        public SquareNode? South { get; set; }
 
         /// <summary>西向连接</summary>
-        public Node? West { get; set; }
+        public SquareNode? West { get; set; }
 
         /// <summary>北向备份/解路径连接</summary>
-        public Node? North2 { get; set; }
+        public SquareNode? North2 { get; set; }
 
         /// <summary>东向备份/解路径连接</summary>
-        public Node? East2 { get; set; }
+        public SquareNode? East2 { get; set; }
 
         /// <summary>南向备份/解路径连接</summary>
-        public Node? South2 { get; set; }
+        public SquareNode? South2 { get; set; }
 
         /// <summary>西向备份/解路径连接</summary>
-        public Node? West2 { get; set; }
+        public SquareNode? West2 { get; set; }
 
         /// <summary>搜索时记录父节点</summary>
-        public Node? VisitedBy { get; set; }
+        public SquareNode? VisitedBy { get; set; }
 
         /// <summary>区域标识（区域标记阶段使用），也复用于求解阶段的距离记录</summary>
         public int Region { get; set; } = -1;
 
         /// <summary>所属单元格</summary>
-        public Cell Cell { get; }
+        public SquareCell Cell { get; }
 
-        public Node(Cell cell)
+        public SquareNode(SquareCell cell)
         {
             Cell = cell;
         }

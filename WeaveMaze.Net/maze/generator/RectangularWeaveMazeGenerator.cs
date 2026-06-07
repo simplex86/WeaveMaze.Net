@@ -696,7 +696,7 @@ namespace SimplexLab.WeaveMaze
 
             if (longCorridors)
             {
-                ShuffleList(nodes);
+                nodes.Shuffle(random);
             }
 
             while (nodes.Count > 0)
@@ -856,18 +856,6 @@ namespace SimplexLab.WeaveMaze
                 (arr[start], arr[i]) = (arr[i], arr[start]);
                 Permute(arr, start + 1, result);
                 (arr[start], arr[i]) = (arr[i], arr[start]);
-            }
-        }
-
-        /// <summary>
-        /// Fisher-Yates 洗牌
-        /// </summary>
-        private void ShuffleList<T>(List<T> list)
-        {
-            for (int i = list.Count - 1; i > 0; i--)
-            {
-                int j = random.Next(i + 1);
-                (list[i], list[j]) = (list[j], list[i]);
             }
         }
 

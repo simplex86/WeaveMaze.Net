@@ -52,6 +52,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private void OnCanvasPaintHandler(object sender, PaintEventArgs e)
         {
             DrawRectangularWeaveMaze(e.Graphics);
+            DrawRectangularWeaveMazeSolution(e.Graphics);
         }
 
         private void OnShowSolutionChanged(object sender, System.EventArgs e)
@@ -91,8 +92,18 @@ namespace SimplexLab.WeaveMaze.TApplication
             var renderer = new RectangularWeaveMazeRenderer();
             renderer.SetSize(canvas.Width, canvas.Height)
                     .SetField(mazeField)
+                    .SetRoundedCorners(showRoundedCorners.Checked)
+                    .Draw(grap);
+        }
+
+        private void DrawRectangularWeaveMazeSolution(Graphics grap)
+        {
+            if (!showSolution.Checked) return;
+
+            var renderer = new RectangularWeaveMazeSolutionRenderer();
+            renderer.SetSize(canvas.Width, canvas.Height)
+                    .SetField(mazeField)
                     .SetSolution(mazeSolution)
-                    .SetShowSolution(showSolution.Checked)
                     .SetRoundedCorners(showRoundedCorners.Checked)
                     .Draw(grap);
         }

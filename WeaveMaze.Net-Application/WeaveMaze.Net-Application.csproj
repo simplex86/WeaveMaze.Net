@@ -13,8 +13,4 @@
     <ProjectReference Include="..\WeaveMaze.Net\WeaveMaze.Net.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="solution\" />
-  </ItemGroup>
-
 </Project>

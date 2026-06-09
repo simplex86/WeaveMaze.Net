@@ -1,12 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SimplexLab.WeaveMaze.TApplication
@@ -25,9 +17,11 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void OnBrowerClickedHandler(object sender, EventArgs e)
         {
-            var dialog = new OpenFileDialog();
-            dialog.Filter = "(*.bmp)|*.bmp|(*.png)|*.png|(*.jpg)|*.jpg";
-            dialog.FilterIndex = 2;
+            var dialog = new OpenFileDialog()
+            {
+                Filter = "(*.bmp)|*.bmp|(*.png)|*.png|(*.jpg)|*.jpg",
+                FilterIndex = 2,
+            };
 
             if (dialog.ShowDialog() == DialogResult.OK)
             {

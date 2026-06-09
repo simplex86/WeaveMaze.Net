@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace SimplexLab.WeaveMaze
 {
@@ -60,11 +61,10 @@ namespace SimplexLab.WeaveMaze
         public bool LongPassages { get; set; }
 
         /// <summary>
-        /// 可选的遮罩（Mask）。true 表示该位置可用，false 表示该位置无通道。
-        /// 为 null 时表示标准矩形迷宫（所有位置均可用）。
-        /// 数组索引为 [y][x]，即 [行][列]。
+        /// 可选的遮罩（Mask）。为 null 时表示标准矩形迷宫（所有位置均可用）。
+        /// 通过 RectangularWeaveMazeMaskLoader 从图片加载。
         /// </summary>
-        public bool[][]? Mask { get; set; }
+        public RectangularWeaveMazeMask? Mask { get; set; }
 
         #endregion
 
@@ -90,33 +90,48 @@ namespace SimplexLab.WeaveMaze
         /// <param name="longPassages">是否启用长通道模式，默认 false</param>
         /// <param name="mask">可选遮罩，null 表示标准矩形</param>
         public RectangularWeaveMazeField()
-            : this(DefaultSize, DefaultSize, DefaultLoopFrac, DefaultCrossFrac, DefaultLongPassages, null)
+            : this(DefaultSize, DefaultSize, DefaultLoopFrac, DefaultCrossFrac, DefaultLongPassages)
         {
 
         }
 
         /// <summary>
-        /// 创建矩形编织式迷宫字段
+        /// 创建矩形编织式迷宫字段，使用默认值
         /// </summary>
-        /// <param name="width">迷宫宽度（列数）</param>
-        /// <param name="height">迷宫高度（行数）</param>
-        /// <param name="loopFrac">环比例（0~1）</param>
-        /// <param name="crossFrac">交叉比例（0~1）</param>
-        /// <param name="longPassages">是否启用长通道模式</param>
-        /// <param name="mask">可选遮罩，null 表示标准矩形</param>
-        public RectangularWeaveMazeField(int width,
-                                         int height,
-                                         double loopFrac,
-                                         double crossFrac,
-                                         bool longPassages,
-                                         bool[][]? mask)
+        /// <param name="width">迷宫宽度（列数），默认 30</param>
+        /// <param name="height">迷宫高度（行数），默认 30</param>
+        /// <param name="loopFrac">环比例（0~1），默认 0.05</param>
+        /// <param name="crossFrac">交叉比例（0~1），默认 0.25</param>
+        /// <param name="longPassages">是否启用长通道模式，默认 false</param>
+        public RectangularWeaveMazeField(int width, int height, double loopFrac, double crossFrac, bool longPassages)
         {
             Width = width;
             Height = height;
             LoopFrac = loopFrac;
             CrossFrac = crossFrac;
             LongPassages = longPassages;
+            Mask = null;
+            Cells = null;
+        }
+
+        /// <summary>
+        /// 创建矩形编织式迷宫字段
+        /// </summary>
+        /// <param name="mask">遮罩</param>
+        /// <param name="loopFrac">环比例（0~1）</param>
+        /// <param name="crossFrac">交叉比例（0~1）</param>
+        /// <param name="longPassages">是否启用长通道模式</param>
+        public RectangularWeaveMazeField(RectangularWeaveMazeMask mask,
+                                         double loopFrac,
+                                         double crossFrac,
+                                         bool longPassages)
+        {
             Mask = mask;
+            Width = mask.Width;
+            Height = mask.Height;
+            LoopFrac = loopFrac;
+            CrossFrac = crossFrac;
+            LongPassages = longPassages;
             Cells = null;
         }
     }

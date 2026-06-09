@@ -35,16 +35,14 @@ namespace SimplexLab.WeaveMaze
         /// <param name="loopFrac">环比例（0~1）</param>
         /// <param name="crossFrac">交叉比例（0~1）</param>
         /// <param name="longPassages">是否启用长通道模式</param>
-        /// <param name="mask">可选遮罩，null 表示标准矩形</param>
-        /// <returns>包含生成结果的字段（Cells 已填充）</returns>
+        /// <returns>包含生成结果的字段</returns>
         public RectangularWeaveMazeField Generate(int width,
                                                   int height,
                                                   double loopFrac,
                                                   double crossFrac,
-                                                  bool longPassages,
-                                                  bool[][]? mask)
+                                                  bool longPassages)
         {
-            var field = new RectangularWeaveMazeField(width, height, loopFrac, crossFrac, longPassages, mask);
+            var field = new RectangularWeaveMazeField(width, height, loopFrac, crossFrac, longPassages);
 
             var cells = CreateCells(field);
             AddLoopsAndCrosses(cells, field.Height, field.Width, field.LoopFrac, field.CrossFrac);
@@ -58,14 +56,59 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 异步生成迷宫
         /// </summary>
+        /// /// <param name="width">迷宫宽度（列数）</param>
+        /// <param name="height">迷宫高度（行数）</param>
+        /// <param name="loopFrac">环比例（0~1）</param>
+        /// <param name="crossFrac">交叉比例（0~1）</param>
+        /// <param name="longPassages">是否启用长通道模式</param>
+        /// <returns>包含生成结果的字段</returns>
         public async Task<RectangularWeaveMazeField> GenerateAsync(int width,
                                                                    int height,
                                                                    double loopFrac,
                                                                    double crossFrac,
-                                                                   bool longPassages,
-                                                                   bool[][]? mask)
+                                                                   bool longPassages)
         {
-            return await Task.Run(() => Generate(width, height, loopFrac, crossFrac, longPassages, mask));
+            return await Task.Run(() => Generate(width, height, loopFrac, crossFrac, longPassages));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mask"></param>
+        /// <param name="loopFrac"></param>
+        /// <param name="crossFrac"></param>
+        /// <param name="longPassages"></param>
+        /// <returns></returns>
+        public RectangularWeaveMazeField Generate(RectangularWeaveMazeMask mask,
+                                                  double loopFrac,
+                                                  double crossFrac,
+                                                  bool longPassages)
+        {
+            var field = new RectangularWeaveMazeField(mask, loopFrac, crossFrac, longPassages);
+
+            var cells = CreateCells(field);
+            AddLoopsAndCrosses(cells, field.Height, field.Width, field.LoopFrac, field.CrossFrac);
+            var regions = AssignRegions(cells, field.Height, field.Width);
+            CreateSpanningTree(cells, field.Height, field.Width, regions, field.LongPassages);
+
+            field.Cells = cells;
+            return field;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mask"></param>
+        /// <param name="loopFrac"></param>
+        /// <param name="crossFrac"></param>
+        /// <param name="longPassages"></param>
+        /// <returns></returns>
+        public async Task<RectangularWeaveMazeField> GenerateAsync(RectangularWeaveMazeMask mask,
+                                                                   double loopFrac,
+                                                                   double crossFrac,
+                                                                   bool longPassages)
+        {
+            return await Task.Run(() => Generate(mask, loopFrac, crossFrac, longPassages));
         }
 
         #region 单元格创建
@@ -81,7 +124,7 @@ namespace SimplexLab.WeaveMaze
                 cells[i] = new SquareCell[field.Width];
                 for (int j = field.Width - 1; j >= 0; --j)
                 {
-                    bool white = field.Mask != null ? field.Mask[i][j] : true;
+                    bool white = field.Mask != null ? field.Mask[i, j] : true;
                     cells[i][j] = new SquareCell(j, i, white);
                 }
             }

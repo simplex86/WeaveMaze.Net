@@ -13,4 +13,10 @@
     <ProjectReference Include="..\WeaveMaze.Net\WeaveMaze.Net.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="maze\control\RectangularMazeMaskControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+  </ItemGroup>
+
 </Project>

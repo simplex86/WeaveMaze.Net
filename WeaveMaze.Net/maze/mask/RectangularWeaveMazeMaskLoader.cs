@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace SimplexLab.WeaveMaze
 {
@@ -43,13 +41,12 @@ namespace SimplexLab.WeaveMaze
         /// <returns>加载后的遮罩对象</returns>
         public static RectangularWeaveMazeMask Load(string filename)
         {
-            using var image = Image.FromFile(filename);
-            using var bitmap = new Bitmap(image);
+            using var image = Image.Load<Rgba32>(filename);
 
-            int width = bitmap.Width;
-            int height = bitmap.Height;
+            int width = image.Width;
+            int height = image.Height;
 
-            var cells = CreateCells(bitmap, width, height);
+            var cells = CreateCells(image, width, height);
             FindRegions(cells, width, height);
             JoinRegions(cells, width, height);
             var mask = CreateMask(cells, width, height);
@@ -70,47 +67,24 @@ namespace SimplexLab.WeaveMaze
         #region 像素转单元格
 
         /// <summary>
-        /// 从位图像素数据创建辅助单元格数组。
+        /// 从图像像素数据创建辅助单元格数组。
         /// 判断白色条件：Alpha >= 128 且亮度（ITU-R BT.601）>= 128
         /// </summary>
-        private static MaskCell[][] CreateCells(Bitmap bitmap, int width, int height)
+        private static MaskCell[][] CreateCells(Image<Rgba32> image, int width, int height)
         {
             var cells = new MaskCell[height][];
 
-            var bitmapData = bitmap.LockBits(
-                new Rectangle(0, 0, width, height),
-                ImageLockMode.ReadOnly,
-                PixelFormat.Format32bppArgb);
-
-            try
+            for (int y = height - 1; y >= 0; --y)
             {
-                var pixelData = new byte[bitmapData.Stride * height];
-                Marshal.Copy(bitmapData.Scan0, pixelData, 0, pixelData.Length);
-                int stride = bitmapData.Stride;
+                cells[y] = new MaskCell[width];
 
-                for (int y = height - 1; y >= 0; --y)
+                for (int x = width - 1; x >= 0; --x)
                 {
-                    cells[y] = new MaskCell[width];
-                    int yOffset = stride * y;
-
-                    for (int x = width - 1; x >= 0; --x)
-                    {
-                        int i = yOffset + 4 * x;
-                        // Format32bppArgb: B, G, R, A
-                        byte b = pixelData[i];
-                        byte g = pixelData[i + 1];
-                        byte r = pixelData[i + 2];
-                        byte a = pixelData[i + 3];
-
-                        var cell = new MaskCell(x, y);
-                        cell.White = a >= 128 && 0.299 * r + 0.587 * g + 0.114 * b >= 128;
-                        cells[y][x] = cell;
-                    }
+                    var pixel = image[x, y];
+                    var cell = new MaskCell(x, y);
+                    cell.White = pixel.A >= 128 && 0.299 * pixel.R + 0.587 * pixel.G + 0.114 * pixel.B >= 128;
+                    cells[y][x] = cell;
                 }
-            }
-            finally
-            {
-                bitmap.UnlockBits(bitmapData);
             }
 
             return cells;

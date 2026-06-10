@@ -7,10 +7,10 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace SimplexLab.WeaveMaze
 {
     /// <summary>
-    /// 矩形编织式迷宫遮罩加载器。从图片文件加载遮罩数据。
+    /// 编织式迷宫遮罩加载器。从图片文件加载遮罩数据。
     /// 算法流程：读取图片像素 → 判断白色/黑色 → 查找连通区域 → 合并区域 → 生成遮罩
     /// </summary>
-    public class RectangularWeaveMazeMaskLoader
+    public class CustomizedWeaveMazeMaskLoader
     {
         #region 辅助类
 
@@ -39,7 +39,7 @@ namespace SimplexLab.WeaveMaze
         /// </summary>
         /// <param name="filename">图片文件路径</param>
         /// <returns>加载后的遮罩对象</returns>
-        public static RectangularWeaveMazeMask Load(string filename)
+        public static CustomizedWeaveMazeMask Load(string filename)
         {
             using var image = Image.Load<Rgba32>(filename);
 
@@ -51,7 +51,7 @@ namespace SimplexLab.WeaveMaze
             JoinRegions(cells, width, height);
             var mask = CreateMask(cells, width, height);
 
-            return new RectangularWeaveMazeMask(mask);
+            return new CustomizedWeaveMazeMask(mask);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace SimplexLab.WeaveMaze
         /// </summary>
         /// <param name="filename">图片文件路径</param>
         /// <returns>加载后的遮罩对象</returns>
-        public static async Task<RectangularWeaveMazeMask> LoadAsync(string filename)
+        public static async Task<CustomizedWeaveMazeMask> LoadAsync(string filename)
         {
             return await Task.Run(() => Load(filename));
         }

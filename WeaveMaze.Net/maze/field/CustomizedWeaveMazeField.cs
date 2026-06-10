@@ -10,7 +10,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 遮罩数据。描述迷宫中哪些位置可用（白色）哪些被屏蔽（黑色）。
         /// </summary>
-        public RectangularWeaveMazeMask Mask { get; }
+        public CustomizedWeaveMazeMask Mask { get; }
 
         /// <summary>
         /// 创建自定义形状编织式迷宫字段
@@ -19,7 +19,7 @@ namespace SimplexLab.WeaveMaze
         /// <param name="loopFrac">环比例（0~1）</param>
         /// <param name="crossFrac">交叉比例（0~1）</param>
         /// <param name="longPassages">是否启用长通道模式</param>
-        public CustomizedWeaveMazeField(RectangularWeaveMazeMask mask,
+        public CustomizedWeaveMazeField(CustomizedWeaveMazeMask mask,
                                         double loopFrac,
                                         double crossFrac,
                                         bool longPassages)

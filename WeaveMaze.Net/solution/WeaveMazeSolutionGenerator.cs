@@ -199,10 +199,6 @@ namespace SimplexLab.WeaveMaze
 
             if (solution.Count == 0) return;
 
-            // 标记路径端点
-            WireTerminal(cells, height, width, solution[0]);
-            WireTerminal(cells, height, width, solution[solution.Count - 1]);
-
             // 沿路径设置 xxx2 连接
             for (int i = solution.Count - 2; i >= 0; --i)
             {
@@ -228,50 +224,6 @@ namespace SimplexLab.WeaveMaze
                 {
                     n0.West2 = n1;
                     n1.East2 = n0;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 为解路径的端点标记终端方向（同时设置 xxx 和 xxx2 为自引用）
-        /// </summary>
-        private static void WireTerminal(SquareCell[][] cells, int height, int width, SquareNode node)
-        {
-            var cell = node.Cell;
-            var permutation = Permutations[Random.Shared.Next(Permutations.Length)];
-
-            for (int i = permutation.Length - 1; i >= 0; --i)
-            {
-                switch (permutation[i])
-                {
-                    case 0: // 北
-                        if (cell.Y == 0 || !cells[cell.Y - 1][cell.X].White)
-                        {
-                            node.North = node.North2 = node;
-                            return;
-                        }
-                        break;
-                    case 1: // 东
-                        if (cell.X == width - 1 || !cells[cell.Y][cell.X + 1].White)
-                        {
-                            node.East = node.East2 = node;
-                            return;
-                        }
-                        break;
-                    case 2: // 南
-                        if (cell.Y == height - 1 || !cells[cell.Y + 1][cell.X].White)
-                        {
-                            node.South = node.South2 = node;
-                            return;
-                        }
-                        break;
-                    default: // 西
-                        if (cell.X == 0 || !cells[cell.Y][cell.X - 1].White)
-                        {
-                            node.West = node.West2 = node;
-                            return;
-                        }
-                        break;
                 }
             }
         }

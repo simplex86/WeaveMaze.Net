@@ -1,6 +1,5 @@
 using System.Drawing;
 using System.IO;
-using System.Reflection.Emit;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -12,6 +11,8 @@ namespace SimplexLab.WeaveMaze.TApplication
         private WeaveMazeGenerator mazeGenerator = new WeaveMazeGenerator();
         private WeaveMazeSolution mazeSolution;
         private WeaveMazeSolutionGenerator solutionGenerator = new WeaveMazeSolutionGenerator();
+        private WeaveMazeGateGenerator gateGenerator = new WeaveMazeGateGenerator();
+        private WeaveMazeGate[] mazeGates;
 
         public MainForm()
         {
@@ -64,6 +65,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             }
 
             mazeSolution = solutionGenerator.Generate(mazeField);
+            mazeGates = gateGenerator.Generate(mazeField, mazeSolution);
         }
 
         private void PostProcess()
@@ -140,6 +142,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             var renderer = new WeaveMazeRenderer();
             renderer.SetSize(canvas.Width, canvas.Height)
                     .SetField(mazeField)
+                    .SetGates(mazeGates)
                     .SetRoundedCorners(showRoundedCorners.Checked)
                     .Draw(grap);
         }
@@ -148,10 +151,11 @@ namespace SimplexLab.WeaveMaze.TApplication
         {
             if (!showSolution.Checked) return;
 
-            var renderer = new RectangularWeaveMazeSolutionRenderer();
+            var renderer = new WeaveMazeSolutionRenderer();
             renderer.SetSize(canvas.Width, canvas.Height)
                     .SetField(mazeField)
                     .SetSolution(mazeSolution)
+                    .SetGates(mazeGates)
                     .SetRoundedCorners(showRoundedCorners.Checked)
                     .Draw(grap);
         }

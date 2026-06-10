@@ -9,12 +9,13 @@ namespace SimplexLab.WeaveMaze.TApplication
     /// 迷宫解法路径渲染器。独立于迷宫墙壁渲染器，
     /// 自行计算布局参数并管理 Graphics 状态。
     /// </summary>
-    internal class RectangularWeaveMazeSolutionRenderer
+    internal class WeaveMazeSolutionRenderer
     {
         private int width;
         private int height;
         private WeaveMazeField field;
         private WeaveMazeSolution solution;
+        private WeaveMazeGate[]? gates;
 
         private const float DefaultPassageWidthFrac = 0.7f;
         private const float DefaultLineWidthFrac = 0.05f;
@@ -24,19 +25,20 @@ namespace SimplexLab.WeaveMaze.TApplication
         private Color solutionColor = Color.Red;
         private bool roundedCorners = true;
 
-        private readonly RectangularWeaveMazeBuilder pathBuilder = new();
+        private readonly WeaveMazeBuilder pathBuilder = new();
 
         // 解路径方向位掩码：N=0b1000, E=0b0100, S=0b0010, W=0b0001
         private Dictionary<SquareCell, int> lowerSolDirs = new();
         private Dictionary<SquareCell, int> upperSolDirs = new();
 
-        public RectangularWeaveMazeSolutionRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
-        public RectangularWeaveMazeSolutionRenderer SetField(WeaveMazeField field) { this.field = field; return this; }
-        public RectangularWeaveMazeSolutionRenderer SetSolution(WeaveMazeSolution solution) { this.solution = solution; return this; }
-        public RectangularWeaveMazeSolutionRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
-        public RectangularWeaveMazeSolutionRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
-        public RectangularWeaveMazeSolutionRenderer SetSolutionColor(Color color) { solutionColor = color; return this; }
-        public RectangularWeaveMazeSolutionRenderer SetRoundedCorners(bool value) { roundedCorners = value; pathBuilder.RoundedCorners = value; return this; }
+        public WeaveMazeSolutionRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
+        public WeaveMazeSolutionRenderer SetField(WeaveMazeField field) { this.field = field; return this; }
+        public WeaveMazeSolutionRenderer SetSolution(WeaveMazeSolution solution) { this.solution = solution; return this; }
+        public WeaveMazeSolutionRenderer SetGates(WeaveMazeGate[]? gates) { this.gates = gates; return this; }
+        public WeaveMazeSolutionRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
+        public WeaveMazeSolutionRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
+        public WeaveMazeSolutionRenderer SetSolutionColor(Color color) { solutionColor = color; return this; }
+        public WeaveMazeSolutionRenderer SetRoundedCorners(bool value) { roundedCorners = value; pathBuilder.RoundedCorners = value; return this; }
 
         public void Draw(Graphics grap)
         {
@@ -116,9 +118,8 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             }
 
-            // 为路径端点添加终端方向（指向迷宫边界外）
-            AddTerminalDir(solPath[0]);
-            AddTerminalDir(solPath[solPath.Count - 1]);
+            // 为路径端点添加终端方向（从出入口数据获取）
+            AddGateTerminalDirs();
         }
 
         private void AddDir(SquareNode node, int dir)
@@ -129,13 +130,13 @@ namespace SimplexLab.WeaveMaze.TApplication
             dict[cell] = existing | dir;
         }
 
-        private void AddTerminalDir(SquareNode node)
+        private void AddGateTerminalDirs()
         {
-            // WireTerminal 将端点的出口方向设为自引用，据此确定终端方向
-            if (node.North == node) AddDir(node, 0b1000);
-            else if (node.East == node) AddDir(node, 0b0100);
-            else if (node.South == node) AddDir(node, 0b0010);
-            else if (node.West == node) AddDir(node, 0b0001);
+            if (gates == null) return;
+            foreach (var gate in gates)
+            {
+                AddDir(gate.Cell.Lower, gate.DirectionBit);
+            }
         }
 
         #endregion

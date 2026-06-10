@@ -7,7 +7,7 @@ namespace SimplexLab.WeaveMaze.TApplication
     /// 迷宫构建器，提供 MoveTo/LineTo/ArcTo 等绘制原语。
     /// 供迷宫墙壁渲染和解法路径渲染共用。
     /// </summary>
-    internal class RectangularWeaveMazeBuilder
+    internal class WeaveMazeBuilder
     {
         private float cursorX, cursorY;
 

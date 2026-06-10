@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 
@@ -9,6 +10,8 @@ namespace SimplexLab.WeaveMaze.TApplication
         private int width;
         private int height;
         private WeaveMazeField field;
+        private WeaveMazeGate[]? gates;
+        private readonly Dictionary<SquareCell, int> gateDirs = new();
 
         private const float DefaultPassageWidthFrac = 0.7f;
         private const float DefaultLineWidthFrac = 0.05f;
@@ -20,10 +23,24 @@ namespace SimplexLab.WeaveMaze.TApplication
         private Color wallColor = Color.Black;
         private Color backgroundColor = Color.White;
 
-        private readonly RectangularWeaveMazeBuilder pathBuilder = new();
+        private readonly WeaveMazeBuilder pathBuilder = new();
 
         public WeaveMazeRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
         public WeaveMazeRenderer SetField(WeaveMazeField field) { this.field = field; return this; }
+        public WeaveMazeRenderer SetGates(WeaveMazeGate[]? gates)
+        {
+            this.gates = gates;
+            gateDirs.Clear();
+            if (gates != null)
+            {
+                foreach (var gate in gates)
+                {
+                    gateDirs.TryGetValue(gate.Cell, out int existing);
+                    gateDirs[gate.Cell] = existing | gate.DirectionBit;
+                }
+            }
+            return this;
+        }
         public WeaveMazeRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
         public WeaveMazeRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
         public WeaveMazeRenderer SetRoundedCorners(bool value) { roundedCorners = value; pathBuilder.RoundedCorners = value; return this; }
@@ -112,6 +129,12 @@ namespace SimplexLab.WeaveMaze.TApplication
                                     (lower.East  != null ? 0b0100 : 0) |
                                     (lower.South != null ? 0b0010 : 0) |
                                     (lower.West  != null ? 0b0001 : 0);
+
+                        // 加入出入口方向
+                        if (gateDirs.TryGetValue(cell, out int gateBits))
+                        {
+                            value |= gateBits;
+                        }
 
                         DrawWallFlat(path, ox, oy, cellSize, d0, d1, dm, r0, value);
                     }

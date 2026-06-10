@@ -55,7 +55,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             splitContainer1.Dock = DockStyle.Fill;
             splitContainer1.FixedPanel = FixedPanel.Panel1;
             splitContainer1.Location = new Point(0, 0);
-            splitContainer1.Margin = new Padding(3, 1, 3, 1);
+            splitContainer1.Margin = new Padding(5, 1, 5, 1);
             splitContainer1.Name = "splitContainer1";
             // 
             // splitContainer1.Panel1
@@ -70,9 +70,9 @@ namespace SimplexLab.WeaveMaze.TApplication
             splitContainer1.Panel2.Controls.Add(showRoundedCorners);
             splitContainer1.Panel2.Controls.Add(showSolution);
             splitContainer1.Panel2.Controls.Add(canvas);
-            splitContainer1.Size = new Size(784, 561);
-            splitContainer1.SplitterDistance = 227;
-            splitContainer1.SplitterWidth = 3;
+            splitContainer1.Size = new Size(1232, 792);
+            splitContainer1.SplitterDistance = 357;
+            splitContainer1.SplitterWidth = 5;
             splitContainer1.TabIndex = 0;
             // 
             // shape
@@ -80,18 +80,20 @@ namespace SimplexLab.WeaveMaze.TApplication
             shape.DropDownStyle = ComboBoxStyle.DropDownList;
             shape.FormattingEnabled = true;
             shape.Items.AddRange(new object[] { "Rectangular", "Customized" });
-            shape.Location = new Point(104, 3);
+            shape.Location = new Point(163, 4);
+            shape.Margin = new Padding(5, 4, 5, 4);
             shape.Name = "shape";
-            shape.Size = new Size(121, 25);
+            shape.Size = new Size(188, 32);
             shape.TabIndex = 5;
             shape.SelectedIndexChanged += OnMaskChangedHandler;
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(7, 6);
+            label1.Location = new Point(11, 8);
+            label1.Margin = new Padding(5, 0, 5, 0);
             label1.Name = "label1";
-            label1.Size = new Size(44, 17);
+            label1.Size = new Size(63, 24);
             label1.TabIndex = 4;
             label1.Text = "Shape";
             // 
@@ -99,24 +101,26 @@ namespace SimplexLab.WeaveMaze.TApplication
             // 
             flowLayoutPanel1.Controls.Add(rectangularMazeControl);
             flowLayoutPanel1.Controls.Add(rectangularMazeMaskControl);
-            flowLayoutPanel1.Location = new Point(0, 26);
+            flowLayoutPanel1.Location = new Point(0, 37);
+            flowLayoutPanel1.Margin = new Padding(5, 4, 5, 4);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
-            flowLayoutPanel1.Size = new Size(227, 430);
+            flowLayoutPanel1.Size = new Size(357, 607);
             flowLayoutPanel1.TabIndex = 3;
             // 
             // rectangularMazeControl
             // 
-            rectangularMazeControl.Location = new Point(4, 4);
-            rectangularMazeControl.Margin = new Padding(4);
+            rectangularMazeControl.Location = new Point(6, 6);
+            rectangularMazeControl.Margin = new Padding(6, 6, 6, 6);
             rectangularMazeControl.Name = "rectangularMazeControl";
-            rectangularMazeControl.Size = new Size(221, 155);
+            rectangularMazeControl.Size = new Size(347, 219);
             rectangularMazeControl.TabIndex = 2;
             // 
             // rectangularMazeMaskControl
             // 
-            rectangularMazeMaskControl.Location = new Point(3, 166);
+            rectangularMazeMaskControl.Location = new Point(8, 237);
+            rectangularMazeMaskControl.Margin = new Padding(8, 6, 8, 6);
             rectangularMazeMaskControl.Name = "rectangularMazeMaskControl";
-            rectangularMazeMaskControl.Size = new Size(224, 121);
+            rectangularMazeMaskControl.Size = new Size(352, 171);
             rectangularMazeMaskControl.TabIndex = 3;
             // 
             // generation
@@ -124,10 +128,10 @@ namespace SimplexLab.WeaveMaze.TApplication
             generation.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             generation.BackColor = Color.LightSkyBlue;
             generation.Font = new Font("Microsoft YaHei UI", 16F, FontStyle.Bold, GraphicsUnit.Point, 134);
-            generation.Location = new Point(3, 487);
-            generation.Margin = new Padding(3, 1, 3, 1);
+            generation.Location = new Point(5, 688);
+            generation.Margin = new Padding(5, 1, 5, 1);
             generation.Name = "generation";
-            generation.Size = new Size(223, 72);
+            generation.Size = new Size(350, 102);
             generation.TabIndex = 0;
             generation.Text = "Generate";
             generation.UseVisualStyleBackColor = false;
@@ -139,10 +143,10 @@ namespace SimplexLab.WeaveMaze.TApplication
             showRoundedCorners.AutoSize = true;
             showRoundedCorners.Checked = true;
             showRoundedCorners.CheckState = CheckState.Checked;
-            showRoundedCorners.Location = new Point(0, 537);
-            showRoundedCorners.Margin = new Padding(3, 4, 3, 4);
+            showRoundedCorners.Location = new Point(0, 760);
+            showRoundedCorners.Margin = new Padding(5, 6, 5, 6);
             showRoundedCorners.Name = "showRoundedCorners";
-            showRoundedCorners.Size = new Size(182, 21);
+            showRoundedCorners.Size = new Size(260, 28);
             showRoundedCorners.TabIndex = 2;
             showRoundedCorners.Text = "Show as Rounded Corners";
             showRoundedCorners.UseVisualStyleBackColor = true;
@@ -152,10 +156,10 @@ namespace SimplexLab.WeaveMaze.TApplication
             // 
             showSolution.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             showSolution.AutoSize = true;
-            showSolution.Location = new Point(209, 537);
-            showSolution.Margin = new Padding(3, 4, 3, 4);
+            showSolution.Location = new Point(328, 760);
+            showSolution.Margin = new Padding(5, 6, 5, 6);
             showSolution.Name = "showSolution";
-            showSolution.Size = new Size(131, 21);
+            showSolution.Size = new Size(191, 28);
             showSolution.TabIndex = 1;
             showSolution.Text = "Show the Solution";
             showSolution.UseVisualStyleBackColor = true;
@@ -165,24 +169,24 @@ namespace SimplexLab.WeaveMaze.TApplication
             // 
             canvas.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             canvas.BackColor = Color.White;
-            canvas.Location = new Point(3, 4);
-            canvas.Margin = new Padding(3, 1, 3, 1);
+            canvas.Location = new Point(5, 6);
+            canvas.Margin = new Padding(5, 1, 5, 1);
             canvas.Name = "canvas";
-            canvas.Size = new Size(550, 528);
+            canvas.Size = new Size(865, 745);
             canvas.TabIndex = 0;
             canvas.TabStop = false;
             canvas.Paint += OnCanvasPaintHandler;
             // 
             // MainForm
             // 
-            AutoScaleDimensions = new SizeF(7F, 17F);
+            AutoScaleDimensions = new SizeF(11F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(784, 561);
+            ClientSize = new Size(1232, 792);
             Controls.Add(splitContainer1);
-            Margin = new Padding(3, 1, 3, 1);
+            Margin = new Padding(5, 1, 5, 1);
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Weave Maze Generator v0.4.15";
+            Text = "Weave Maze Generator v0.4.16";
             splitContainer1.Panel1.ResumeLayout(false);
             splitContainer1.Panel1.PerformLayout();
             splitContainer1.Panel2.ResumeLayout(false);

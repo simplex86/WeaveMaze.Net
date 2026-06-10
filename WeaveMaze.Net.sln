@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36414.22
@@ -6,6 +6,8 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeaveMaze.Net", "WeaveMaze.Net\WeaveMaze.Net.csproj", "{89D06D1F-5204-4432-9F3E-967ECF1CCFD3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeaveMaze.Net-Winform", "WeaveMaze.Net-Winform\WeaveMaze.Net-Winform.csproj", "{81EA9410-D6B1-EBD0-8520-02AE748A4975}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeaveMaze.Net-Avalonia", "WeaveMaze.Net-Avalonia\WeaveMaze.Net-Avalonia.csproj", "{B3F7A210-C508-4D9E-A6E1-8F2C3D9B0A1D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{81EA9410-D6B1-EBD0-8520-02AE748A4975}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81EA9410-D6B1-EBD0-8520-02AE748A4975}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81EA9410-D6B1-EBD0-8520-02AE748A4975}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3F7A210-C508-4D9E-A6E1-8F2C3D9B0A1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3F7A210-C508-4D9E-A6E1-8F2C3D9B0A1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3F7A210-C508-4D9E-A6E1-8F2C3D9B0A1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3F7A210-C508-4D9E-A6E1-8F2C3D9B0A1D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -94,7 +94,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             {
                 Orientation = Orientation.Vertical,
                 Spacing = 6,
-                Margin = new Thickness(3),
+                Margin = new Thickness(0),
                 Children =
                 {
                     new Grid
@@ -148,14 +148,23 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            // Main layout: fixed left + gap + flexible right
+            // Left panel wrapped in Border with right edge separator
+            var leftBorder = new Border
+            {
+                BorderBrush = Brushes.LightGray,
+                BorderThickness = new Thickness(0, 0, 1, 0),
+                Padding = new Thickness(6),
+                Child = leftWithButton,
+            };
+
+            // Main layout: fixed left + flexible right
             var mainGrid = new Grid
             {
-                ColumnDefinitions = ColumnDefinitions.Parse("300,2,*"),
+                ColumnDefinitions = ColumnDefinitions.Parse("300,*"),
                 Children =
                 {
-                    leftWithButton,
-                    rightPanel.WithGridColumn(2),
+                    leftBorder,
+                    rightPanel.WithGridColumn(1),
                 }
             };
 

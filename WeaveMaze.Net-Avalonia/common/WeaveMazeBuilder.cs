@@ -106,7 +106,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             if (sweep < -Math.PI) sweep += 2 * Math.PI;
 
             // 用 ArcTo 绘制弧线
-            var size = new Avalonia.Size(radius * 2, radius * 2);
+            var size = new Avalonia.Size(radius, radius);
             var rotationAngle = 0.0;
             var isLargeArc = Math.Abs(sweep) > Math.PI;
             var sweepDirection = sweep > 0 ? SweepDirection.Clockwise : SweepDirection.CounterClockwise;

@@ -5,10 +5,10 @@ using System.Threading.Tasks;
 namespace SimplexLab.WeaveMaze
 {
     /// <summary>
-    /// 矩形编织式迷宫生成器。
+    /// 编织式迷宫生成器。
     /// 算法流程：添加环和交叉 → 区域标记 → 生成生成树
     /// </summary>
-    public class RectangularWeaveMazeGenerator
+    public class WeaveMazeGenerator
     {
         /// <summary>
         /// 0-3 的所有 24 种排列，用于随机选择方向
@@ -17,12 +17,12 @@ namespace SimplexLab.WeaveMaze
 
         private readonly Random random;
 
-        public RectangularWeaveMazeGenerator()
+        public WeaveMazeGenerator()
             : this(Random.Shared)
         {
         }
 
-        public RectangularWeaveMazeGenerator(Random random)
+        public WeaveMazeGenerator(Random random)
         {
             this.random = random;
         }
@@ -30,21 +30,11 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 同步生成迷宫
         /// </summary>
-        /// <param name="width">迷宫宽度（列数）</param>
-        /// <param name="height">迷宫高度（行数）</param>
-        /// <param name="loopFrac">环比例（0~1）</param>
-        /// <param name="crossFrac">交叉比例（0~1）</param>
-        /// <param name="longPassages">是否启用长通道模式</param>
+        /// <param name="field">迷宫字段，包含生成参数和遮罩</param>
         /// <returns>包含生成结果的字段</returns>
-        public RectangularWeaveMazeField Generate(int width,
-                                                  int height,
-                                                  double loopFrac,
-                                                  double crossFrac,
-                                                  bool longPassages)
+        public WeaveMazeField Generate(WeaveMazeField field)
         {
-            var field = new RectangularWeaveMazeField(width, height, loopFrac, crossFrac, longPassages);
-
-            var cells = CreateCells(field);
+            var cells = field.CreateCells();
             AddLoopsAndCrosses(cells, field.Height, field.Width, field.LoopFrac, field.CrossFrac);
             var regions = AssignRegions(cells, field.Height, field.Width);
             CreateSpanningTree(cells, field.Height, field.Width, regions, field.LongPassages);
@@ -56,82 +46,12 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 异步生成迷宫
         /// </summary>
-        /// /// <param name="width">迷宫宽度（列数）</param>
-        /// <param name="height">迷宫高度（行数）</param>
-        /// <param name="loopFrac">环比例（0~1）</param>
-        /// <param name="crossFrac">交叉比例（0~1）</param>
-        /// <param name="longPassages">是否启用长通道模式</param>
+        /// <param name="field">迷宫字段，包含生成参数和遮罩</param>
         /// <returns>包含生成结果的字段</returns>
-        public async Task<RectangularWeaveMazeField> GenerateAsync(int width,
-                                                                   int height,
-                                                                   double loopFrac,
-                                                                   double crossFrac,
-                                                                   bool longPassages)
+        public async Task<WeaveMazeField> GenerateAsync(WeaveMazeField field)
         {
-            return await Task.Run(() => Generate(width, height, loopFrac, crossFrac, longPassages));
+            return await Task.Run(() => Generate(field));
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="mask"></param>
-        /// <param name="loopFrac"></param>
-        /// <param name="crossFrac"></param>
-        /// <param name="longPassages"></param>
-        /// <returns></returns>
-        public RectangularWeaveMazeField Generate(RectangularWeaveMazeMask mask,
-                                                  double loopFrac,
-                                                  double crossFrac,
-                                                  bool longPassages)
-        {
-            var field = new RectangularWeaveMazeField(mask, loopFrac, crossFrac, longPassages);
-
-            var cells = CreateCells(field);
-            AddLoopsAndCrosses(cells, field.Height, field.Width, field.LoopFrac, field.CrossFrac);
-            var regions = AssignRegions(cells, field.Height, field.Width);
-            CreateSpanningTree(cells, field.Height, field.Width, regions, field.LongPassages);
-
-            field.Cells = cells;
-            return field;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="mask"></param>
-        /// <param name="loopFrac"></param>
-        /// <param name="crossFrac"></param>
-        /// <param name="longPassages"></param>
-        /// <returns></returns>
-        public async Task<RectangularWeaveMazeField> GenerateAsync(RectangularWeaveMazeMask mask,
-                                                                   double loopFrac,
-                                                                   double crossFrac,
-                                                                   bool longPassages)
-        {
-            return await Task.Run(() => Generate(mask, loopFrac, crossFrac, longPassages));
-        }
-
-        #region 单元格创建
-
-        /// <summary>
-        /// 根据字段参数创建单元格数组
-        /// </summary>
-        private static SquareCell[][] CreateCells(RectangularWeaveMazeField field)
-        {
-            var cells = new SquareCell[field.Height][];
-            for (int i = field.Height - 1; i >= 0; --i)
-            {
-                cells[i] = new SquareCell[field.Width];
-                for (int j = field.Width - 1; j >= 0; --j)
-                {
-                    bool white = field.Mask != null ? field.Mask[i, j] : true;
-                    cells[i][j] = new SquareCell(j, i, white);
-                }
-            }
-            return cells;
-        }
-
-        #endregion
 
         #region 环和交叉添加
 

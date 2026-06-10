@@ -4,11 +4,11 @@ using System.Drawing.Drawing2D;
 
 namespace SimplexLab.WeaveMaze.TApplication
 {
-    internal class RectangularWeaveMazeRenderer
+    internal class WeaveMazeRenderer
     {
         private int width;
         private int height;
-        private RectangularWeaveMazeField field;
+        private WeaveMazeField field;
 
         private const float DefaultPassageWidthFrac = 0.7f;
         private const float DefaultLineWidthFrac = 0.05f;
@@ -22,13 +22,13 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private readonly RectangularWeaveMazeBuilder pathBuilder = new();
 
-        public RectangularWeaveMazeRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
-        public RectangularWeaveMazeRenderer SetField(RectangularWeaveMazeField field) { this.field = field; return this; }
-        public RectangularWeaveMazeRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
-        public RectangularWeaveMazeRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
-        public RectangularWeaveMazeRenderer SetRoundedCorners(bool value) { roundedCorners = value; pathBuilder.RoundedCorners = value; return this; }
-        public RectangularWeaveMazeRenderer SetWallColor(Color color) { wallColor = color; return this; }
-        public RectangularWeaveMazeRenderer SetBackgroundColor(Color color) { backgroundColor = color; return this; }
+        public WeaveMazeRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
+        public WeaveMazeRenderer SetField(WeaveMazeField field) { this.field = field; return this; }
+        public WeaveMazeRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
+        public WeaveMazeRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
+        public WeaveMazeRenderer SetRoundedCorners(bool value) { roundedCorners = value; pathBuilder.RoundedCorners = value; return this; }
+        public WeaveMazeRenderer SetWallColor(Color color) { wallColor = color; return this; }
+        public WeaveMazeRenderer SetBackgroundColor(Color color) { backgroundColor = color; return this; }
 
         public void Draw(Graphics grap)
         {

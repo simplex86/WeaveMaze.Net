@@ -33,7 +33,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private void InitializeComponent()
         {
             splitContainer1 = new SplitContainer();
-            masktype = new ComboBox();
+            shape = new ComboBox();
             label1 = new Label();
             flowLayoutPanel1 = new FlowLayoutPanel();
             rectangularMazeControl = new RectangularMazeControl();
@@ -60,7 +60,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             // 
             // splitContainer1.Panel1
             // 
-            splitContainer1.Panel1.Controls.Add(masktype);
+            splitContainer1.Panel1.Controls.Add(shape);
             splitContainer1.Panel1.Controls.Add(label1);
             splitContainer1.Panel1.Controls.Add(flowLayoutPanel1);
             splitContainer1.Panel1.Controls.Add(generation);
@@ -75,25 +75,25 @@ namespace SimplexLab.WeaveMaze.TApplication
             splitContainer1.SplitterWidth = 3;
             splitContainer1.TabIndex = 0;
             // 
-            // masktype
+            // shape
             // 
-            masktype.DropDownStyle = ComboBoxStyle.DropDownList;
-            masktype.FormattingEnabled = true;
-            masktype.Items.AddRange(new object[] { "None", "Image" });
-            masktype.Location = new Point(104, 3);
-            masktype.Name = "masktype";
-            masktype.Size = new Size(121, 25);
-            masktype.TabIndex = 5;
-            masktype.SelectedIndexChanged += OnMaskChangedHandler;
+            shape.DropDownStyle = ComboBoxStyle.DropDownList;
+            shape.FormattingEnabled = true;
+            shape.Items.AddRange(new object[] { "Rectangular", "Customized" });
+            shape.Location = new Point(104, 3);
+            shape.Name = "shape";
+            shape.Size = new Size(121, 25);
+            shape.TabIndex = 5;
+            shape.SelectedIndexChanged += OnMaskChangedHandler;
             // 
             // label1
             // 
             label1.AutoSize = true;
             label1.Location = new Point(7, 6);
             label1.Name = "label1";
-            label1.Size = new Size(40, 17);
+            label1.Size = new Size(44, 17);
             label1.TabIndex = 4;
-            label1.Text = "Mask";
+            label1.Text = "Shape";
             // 
             // flowLayoutPanel1
             // 
@@ -168,7 +168,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             canvas.Location = new Point(3, 4);
             canvas.Margin = new Padding(3, 1, 3, 1);
             canvas.Name = "canvas";
-            canvas.Size = new Size(549, 528);
+            canvas.Size = new Size(550, 528);
             canvas.TabIndex = 0;
             canvas.TabStop = false;
             canvas.Paint += OnCanvasPaintHandler;
@@ -182,7 +182,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             Margin = new Padding(3, 1, 3, 1);
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Weave Maze Generator v0.3.15";
+            Text = "Weave Maze Generator v0.4.15";
             splitContainer1.Panel1.ResumeLayout(false);
             splitContainer1.Panel1.PerformLayout();
             splitContainer1.Panel2.ResumeLayout(false);
@@ -203,7 +203,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private CheckBox showSolution;
         private CheckBox showRoundedCorners;
         private FlowLayoutPanel flowLayoutPanel1;
-        private ComboBox masktype;
+        private ComboBox shape;
         private Label label1;
         private RectangularMazeMaskControl rectangularMazeMaskControl;
     }

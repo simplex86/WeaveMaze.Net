@@ -17,7 +17,7 @@ namespace SimplexLab.WeaveMaze
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public WeaveMazeSolution Generate(RectangularWeaveMazeField field)
+        public WeaveMazeSolution Generate(WeaveMazeField field)
         {
             var cells = field.Cells;
             if (cells == null)
@@ -46,7 +46,7 @@ namespace SimplexLab.WeaveMaze
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public async Task<WeaveMazeSolution> GenerateAsync(RectangularWeaveMazeField field)
+        public async Task<WeaveMazeSolution> GenerateAsync(WeaveMazeField field)
         {
             return await Task.Run(() => Generate(field));
         }

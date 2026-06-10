@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.IO;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -7,21 +8,23 @@ namespace SimplexLab.WeaveMaze.TApplication
 {
     public partial class MainForm : Form
     {
-        private RectangularWeaveMazeField mazeField;
+        private WeaveMazeField mazeField;
+        private WeaveMazeGenerator mazeGenerator = new WeaveMazeGenerator();
         private WeaveMazeSolution mazeSolution;
+        private WeaveMazeSolutionGenerator solutionGenerator = new WeaveMazeSolutionGenerator();
 
         public MainForm()
         {
             InitializeComponent();
-            masktype.SelectedIndex = 0;
+            shape.SelectedIndex = (int)EWeaveMazeShape.Rectangular;
         }
 
         #region Handler
 
         private void OnMaskChangedHandler(object sender, System.EventArgs e)
         {
-            rectangularMazeControl.Visible = masktype.SelectedIndex == 0;
-            rectangularMazeMaskControl.Visible = masktype.SelectedIndex == 1;
+            rectangularMazeControl.Visible = shape.SelectedIndex == 0;
+            rectangularMazeMaskControl.Visible = shape.SelectedIndex == 1;
         }
 
         private void OnGeneratoinClickedHandler(object sender, System.EventArgs e)
@@ -40,7 +43,7 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void PrevProcess()
         {
-            masktype.Enabled = false;
+            shape.Enabled = false;
             rectangularMazeControl.Enabled = false;
             rectangularMazeMaskControl.Enabled = false;
             generation.Enabled = false;
@@ -50,12 +53,22 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private async Task Generate()
         {
-            await GenerateRectangularWeaveMaze();
+            switch ((EWeaveMazeShape)shape.SelectedIndex)
+            {
+                case EWeaveMazeShape.Rectangular:
+                    await GenerateRectangularWeaveMaze();
+                    break;
+                case EWeaveMazeShape.Customized:
+                    await GenerateCustomizedWeaveMaze();
+                    break;
+            }
+
+            mazeSolution = solutionGenerator.Generate(mazeField);
         }
 
         private void PostProcess()
         {
-            masktype.Enabled = true;
+            shape.Enabled = true;
             rectangularMazeControl.Enabled = true;
             rectangularMazeMaskControl.Enabled = true;
             generation.Enabled = true;
@@ -67,8 +80,11 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void OnCanvasPaintHandler(object sender, PaintEventArgs e)
         {
-            DrawRectangularWeaveMaze(e.Graphics);
-            DrawRectangularWeaveMazeSolution(e.Graphics);
+            if (mazeField != null)
+            {
+                DrawWeaveMaze(e.Graphics);
+                DrawWeaveMazeSolution(e.Graphics);
+            }
         }
 
         private void OnShowSolutionChanged(object sender, System.EventArgs e)
@@ -87,56 +103,48 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private async Task GenerateRectangularWeaveMaze()
         {
-            var generator = new RectangularWeaveMazeGenerator();
+            var width = rectangularMazeControl.MazeWidth;
+            var height = rectangularMazeControl.MazeHeight;
+            var loopFrac = rectangularMazeControl.LoopFraction;
+            var crossFrac = rectangularMazeControl.CrossFraction;
+            var longPassages = rectangularMazeControl.LongPassages;
 
-            if (masktype.SelectedIndex == 0)
-            {
-                var width = rectangularMazeControl.MazeWidth;
-                var height = rectangularMazeControl.MazeHeight;
-                var loopFrac = rectangularMazeControl.LoopFraction;
-                var crossFrac = rectangularMazeControl.CrossFraction;
-                var longPassages = rectangularMazeControl.LongPassages;
+            if (width <= 0) width = canvas.Width / 30;
+            if (height <= 0) height = canvas.Height / 30;
 
-                if (width  <= 0) width  = canvas.Width  / 30;
-                if (height <= 0) height = canvas.Height / 30;
-
-                mazeField = await generator.GenerateAsync(width, height, loopFrac, crossFrac, longPassages);
-            }
-            else if (masktype.SelectedIndex == 1)
-            {
-                var filename = rectangularMazeMaskControl.FileName;
-                var loopFrac = rectangularMazeMaskControl.LoopFraction;
-                var crossFrac = rectangularMazeMaskControl.CrossFraction;
-                var longPassages = rectangularMazeMaskControl.LongPassages;
-
-                if (string.IsNullOrEmpty(filename) || !File.Exists(filename))
-                {
-                    var width = canvas.Width / 30;
-                    var height = canvas.Height / 30;
-
-                    mazeField = await generator.GenerateAsync(width, height, loopFrac, crossFrac, longPassages);
-                }
-                else
-                {
-                    var mask = RectangularWeaveMazeMaskLoader.Load(filename);
-                    mazeField = await generator.GenerateAsync(mask, loopFrac, crossFrac, longPassages);
-                }
-            }
-
-            var solutionGenerator = new WeaveMazeSolutionGenerator();
-            mazeSolution = solutionGenerator.Generate(mazeField);
+            var field = new RectangularWeaveMazeField(width, height, loopFrac, crossFrac, longPassages);
+            mazeField = await mazeGenerator.GenerateAsync(field);
         }
 
-        private void DrawRectangularWeaveMaze(Graphics grap)
+        private async Task GenerateCustomizedWeaveMaze()
         {
-            var renderer = new RectangularWeaveMazeRenderer();
+            var filename = rectangularMazeMaskControl.FileName;
+            if (string.IsNullOrEmpty(filename) || !File.Exists(filename))
+            {
+                return;
+            }
+
+            var loopFrac = rectangularMazeMaskControl.LoopFraction;
+            var crossFrac = rectangularMazeMaskControl.CrossFraction;
+            var longPassages = rectangularMazeMaskControl.LongPassages;
+
+            var mask = RectangularWeaveMazeMaskLoader.Load(filename);
+            var field = new CustomizedWeaveMazeField(mask, loopFrac, crossFrac, longPassages);
+
+            mazeField = await mazeGenerator.GenerateAsync(field);
+        }
+
+
+        private void DrawWeaveMaze(Graphics grap)
+        {
+            var renderer = new WeaveMazeRenderer();
             renderer.SetSize(canvas.Width, canvas.Height)
                     .SetField(mazeField)
                     .SetRoundedCorners(showRoundedCorners.Checked)
                     .Draw(grap);
         }
 
-        private void DrawRectangularWeaveMazeSolution(Graphics grap)
+        private void DrawWeaveMazeSolution(Graphics grap)
         {
             if (!showSolution.Checked) return;
 

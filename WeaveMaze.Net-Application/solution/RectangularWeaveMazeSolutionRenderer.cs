@@ -13,7 +13,7 @@ namespace SimplexLab.WeaveMaze.TApplication
     {
         private int width;
         private int height;
-        private RectangularWeaveMazeField field;
+        private WeaveMazeField field;
         private WeaveMazeSolution solution;
 
         private const float DefaultPassageWidthFrac = 0.7f;
@@ -31,7 +31,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private Dictionary<SquareCell, int> upperSolDirs = new();
 
         public RectangularWeaveMazeSolutionRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
-        public RectangularWeaveMazeSolutionRenderer SetField(RectangularWeaveMazeField field) { this.field = field; return this; }
+        public RectangularWeaveMazeSolutionRenderer SetField(WeaveMazeField field) { this.field = field; return this; }
         public RectangularWeaveMazeSolutionRenderer SetSolution(WeaveMazeSolution solution) { this.solution = solution; return this; }
         public RectangularWeaveMazeSolutionRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
         public RectangularWeaveMazeSolutionRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }

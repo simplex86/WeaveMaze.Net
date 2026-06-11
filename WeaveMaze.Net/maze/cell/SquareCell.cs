@@ -4,7 +4,7 @@ namespace SimplexLab.WeaveMaze
     /// 迷宫单元格。每个单元格包含下层（lower）和上层（upper）两个节点。
     /// 平坦单元格只有 lower 节点参与连接；非平坦单元格（存在跨越结构）的 upper 节点也有连接。
     /// </summary>
-    public class SquareCell
+    internal class SquareCell
     {
         /// <summary>下层节点（地面层）</summary>
         public SquareNode Lower { get; }

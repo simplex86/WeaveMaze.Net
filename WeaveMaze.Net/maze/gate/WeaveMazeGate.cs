@@ -8,26 +8,26 @@ namespace SimplexLab.WeaveMaze
     public class WeaveMazeGate
     {
         /// <summary>出入口所在的单元格</summary>
-        public SquareCell Cell { get; }
+        internal SquareCell Cell { get; }
 
         /// <summary>
         /// 出入口方向：0=北, 1=东, 2=南, 3=西
         /// </summary>
-        public int Direction { get; }
+        internal int Direction { get; }
 
         /// <summary>
         /// 创建迷宫出入口
         /// </summary>
         /// <param name="cell">出入口所在的单元格</param>
         /// <param name="direction">出入口方向：0=北, 1=东, 2=南, 3=西</param>
-        public WeaveMazeGate(SquareCell cell, int direction)
+        internal WeaveMazeGate(SquareCell cell, int direction)
         {
             Cell = cell;
             Direction = direction;
         }
 
         /// <summary>方向对应的位掩码：北=0b1000, 东=0b0100, 南=0b0010, 西=0b0001</summary>
-        public int DirectionBit => Direction switch
+        internal int DirectionBit => Direction switch
         {
             0 => 0b1000,
             1 => 0b0100,

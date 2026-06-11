@@ -4,7 +4,7 @@ namespace SimplexLab.WeaveMaze
     /// 迷宫节点。每个单元格包含 lower（下层）和 upper（上层）两个节点，
     /// 上层节点用于表示编织式迷宫中通道跨越时的架空通道。
     /// </summary>
-    public class SquareNode
+    internal class SquareNode
     {
         /// <summary>北向连接</summary>
         public SquareNode? North { get; set; }

@@ -31,7 +31,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 创建单元格数组。无遮罩时所有单元格均为白色。
         /// </summary>
-        public override SquareCell[][] CreateCells()
+        internal override SquareCell[][] CreateCells()
         {
             var cells = new SquareCell[Height][];
             for (int i = Height - 1; i >= 0; --i)

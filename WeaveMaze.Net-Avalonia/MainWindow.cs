@@ -168,7 +168,7 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            Title = "Weave Maze Generator v0.5.21";
+            Title = "Weave Maze Generator v0.6.23";
             Width = 1200;
             Height = 800;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;

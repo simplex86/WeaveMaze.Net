@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="maze\control\RectangularMazeMaskControl.cs">
+    <Compile Update="control\CustomizedMazeControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
   </ItemGroup>

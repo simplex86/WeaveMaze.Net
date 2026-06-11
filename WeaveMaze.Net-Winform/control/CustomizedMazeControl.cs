@@ -3,9 +3,9 @@ using System.Windows.Forms;
 
 namespace SimplexLab.WeaveMaze.TApplication
 {
-    public partial class RectangularMazeMaskControl : UserControl
+    public partial class CustomizedMazeControl : UserControl
     {
-        public RectangularMazeMaskControl()
+        public CustomizedMazeControl()
         {
             InitializeComponent();
         }

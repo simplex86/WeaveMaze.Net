@@ -22,7 +22,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         // Controls
         private ComboBox shape;
         private RectangularMazeControl rectangularMazeControl;
-        private RectangularMazeMaskControl rectangularMazeMaskControl;
+        private CustomizedMazeControl customizedMazeControl;
         private Button generation;
         private CheckBox showRoundedCorners;
         private CheckBox showSolution;
@@ -49,7 +49,7 @@ namespace SimplexLab.WeaveMaze.TApplication
                 IsVisible = true,
             };
 
-            rectangularMazeMaskControl = new RectangularMazeMaskControl
+            customizedMazeControl = new CustomizedMazeControl
             {
                 IsVisible = false,
             };
@@ -107,7 +107,7 @@ namespace SimplexLab.WeaveMaze.TApplication
                         }
                     },
                     rectangularMazeControl,
-                    rectangularMazeMaskControl,
+                    customizedMazeControl,
                 }
             };
 
@@ -180,7 +180,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private void OnMaskChangedHandler(object? sender, SelectionChangedEventArgs e)
         {
             rectangularMazeControl.IsVisible = shape.SelectedIndex == 0;
-            rectangularMazeMaskControl.IsVisible = shape.SelectedIndex == 1;
+            customizedMazeControl.IsVisible = shape.SelectedIndex == 1;
         }
 
         private async void OnGeneratoinClickedHandler(object? sender, RoutedEventArgs e)
@@ -201,7 +201,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         {
             shape.IsEnabled = false;
             rectangularMazeControl.IsEnabled = false;
-            rectangularMazeMaskControl.IsEnabled = false;
+            customizedMazeControl.IsEnabled = false;
             generation.IsEnabled = false;
             showRoundedCorners.IsEnabled = false;
             showSolution.IsEnabled = false;
@@ -230,7 +230,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         {
             shape.IsEnabled = true;
             rectangularMazeControl.IsEnabled = true;
-            rectangularMazeMaskControl.IsEnabled = true;
+            customizedMazeControl.IsEnabled = true;
             generation.IsEnabled = true;
             showRoundedCorners.IsEnabled = true;
             showSolution.IsEnabled = true;
@@ -268,15 +268,15 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private async Task GenerateCustomizedWeaveMaze()
         {
-            var filename = rectangularMazeMaskControl.FileName;
+            var filename = customizedMazeControl.FileName;
             if (string.IsNullOrEmpty(filename) || !File.Exists(filename))
             {
                 return;
             }
 
-            var loopFrac = rectangularMazeMaskControl.LoopFraction;
-            var crossFrac = rectangularMazeMaskControl.CrossFraction;
-            var longPassages = rectangularMazeMaskControl.LongPassages;
+            var loopFrac = customizedMazeControl.LoopFraction;
+            var crossFrac = customizedMazeControl.CrossFraction;
+            var longPassages = customizedMazeControl.LongPassages;
 
             var mask = CustomizedWeaveMazeMaskLoader.Load(filename);
             var field = new CustomizedWeaveMazeField(mask, loopFrac, crossFrac, longPassages);
@@ -286,25 +286,27 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void DrawWeaveMaze(DrawingContext context)
         {
+            using var gc = new GraphicsContext(context);
             var renderer = new WeaveMazeRenderer();
             renderer.SetSize((int)canvas.Bounds.Width, (int)canvas.Bounds.Height)
                     .SetField(mazeField!)
                     .SetGates(mazeGates)
                     .SetRoundedCorners(showRoundedCorners.IsChecked == true)
-                    .Draw(context);
+                    .Draw(gc);
         }
 
         private void DrawWeaveMazeSolution(DrawingContext context)
         {
             if (showSolution.IsChecked != true) return;
 
+            using var gc = new GraphicsContext(context);
             var renderer = new WeaveMazeSolutionRenderer();
             renderer.SetSize((int)canvas.Bounds.Width, (int)canvas.Bounds.Height)
                     .SetField(mazeField!)
                     .SetSolution(mazeSolution)
                     .SetGates(mazeGates)
                     .SetRoundedCorners(showRoundedCorners.IsChecked == true)
-                    .Draw(context);
+                    .Draw(gc);
         }
 
         #endregion

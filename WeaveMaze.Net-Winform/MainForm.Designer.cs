@@ -37,7 +37,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             label1 = new Label();
             flowLayoutPanel1 = new FlowLayoutPanel();
             rectangularMazeControl = new RectangularMazeControl();
-            rectangularMazeMaskControl = new RectangularMazeMaskControl();
+            customizedMazeControl = new CustomizedMazeControl();
             generation = new Button();
             showRoundedCorners = new CheckBox();
             showSolution = new CheckBox();
@@ -100,7 +100,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             // flowLayoutPanel1
             // 
             flowLayoutPanel1.Controls.Add(rectangularMazeControl);
-            flowLayoutPanel1.Controls.Add(rectangularMazeMaskControl);
+            flowLayoutPanel1.Controls.Add(customizedMazeControl);
             flowLayoutPanel1.Location = new Point(0, 37);
             flowLayoutPanel1.Margin = new Padding(5, 4, 5, 4);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
@@ -117,11 +117,11 @@ namespace SimplexLab.WeaveMaze.TApplication
             // 
             // rectangularMazeMaskControl
             // 
-            rectangularMazeMaskControl.Location = new Point(8, 237);
-            rectangularMazeMaskControl.Margin = new Padding(8, 6, 8, 6);
-            rectangularMazeMaskControl.Name = "rectangularMazeMaskControl";
-            rectangularMazeMaskControl.Size = new Size(352, 171);
-            rectangularMazeMaskControl.TabIndex = 3;
+            customizedMazeControl.Location = new Point(8, 237);
+            customizedMazeControl.Margin = new Padding(8, 6, 8, 6);
+            customizedMazeControl.Name = "rectangularMazeMaskControl";
+            customizedMazeControl.Size = new Size(352, 171);
+            customizedMazeControl.TabIndex = 3;
             // 
             // generation
             // 
@@ -209,6 +209,6 @@ namespace SimplexLab.WeaveMaze.TApplication
         private FlowLayoutPanel flowLayoutPanel1;
         private ComboBox shape;
         private Label label1;
-        private RectangularMazeMaskControl rectangularMazeMaskControl;
+        private CustomizedMazeControl customizedMazeControl;
     }
 }

@@ -8,7 +8,7 @@ using Avalonia.Platform.Storage;
 
 namespace SimplexLab.WeaveMaze.TApplication
 {
-    public partial class RectangularMazeMaskControl : UserControl
+    public partial class CustomizedMazeControl : UserControl
     {
         private NumericUpDown loopFraction;
         private NumericUpDown crossFraction;
@@ -16,7 +16,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private TextBox filename;
         private Button brower;
 
-        public RectangularMazeMaskControl()
+        public CustomizedMazeControl()
         {
             InitializeComponent();
         }

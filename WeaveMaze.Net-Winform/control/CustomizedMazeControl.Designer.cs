@@ -1,6 +1,6 @@
 ﻿namespace SimplexLab.WeaveMaze.TApplication
 {
-    partial class RectangularMazeMaskControl
+    partial class CustomizedMazeControl
     {
         /// <summary> 
         /// 必需的设计器变量。

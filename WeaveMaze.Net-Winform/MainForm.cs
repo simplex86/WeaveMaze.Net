@@ -25,7 +25,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private void OnMaskChangedHandler(object sender, System.EventArgs e)
         {
             rectangularMazeControl.Visible = shape.SelectedIndex == 0;
-            rectangularMazeMaskControl.Visible = shape.SelectedIndex == 1;
+            customizedMazeControl.Visible = shape.SelectedIndex == 1;
         }
 
         private void OnGeneratoinClickedHandler(object sender, System.EventArgs e)
@@ -46,7 +46,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         {
             shape.Enabled = false;
             rectangularMazeControl.Enabled = false;
-            rectangularMazeMaskControl.Enabled = false;
+            customizedMazeControl.Enabled = false;
             generation.Enabled = false;
             showRoundedCorners.Enabled = false;
             showSolution.Enabled = false;
@@ -72,7 +72,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         {
             shape.Enabled = true;
             rectangularMazeControl.Enabled = true;
-            rectangularMazeMaskControl.Enabled = true;
+            customizedMazeControl.Enabled = true;
             generation.Enabled = true;
             showRoundedCorners.Enabled = true;
             showSolution.Enabled = true;
@@ -120,15 +120,15 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private async Task GenerateCustomizedWeaveMaze()
         {
-            var filename = rectangularMazeMaskControl.FileName;
+            var filename = customizedMazeControl.FileName;
             if (string.IsNullOrEmpty(filename) || !File.Exists(filename))
             {
                 return;
             }
 
-            var loopFrac = rectangularMazeMaskControl.LoopFraction;
-            var crossFrac = rectangularMazeMaskControl.CrossFraction;
-            var longPassages = rectangularMazeMaskControl.LongPassages;
+            var loopFrac = customizedMazeControl.LoopFraction;
+            var crossFrac = customizedMazeControl.CrossFraction;
+            var longPassages = customizedMazeControl.LongPassages;
 
             var mask = CustomizedWeaveMazeMaskLoader.Load(filename);
             var field = new CustomizedWeaveMazeField(mask, loopFrac, crossFrac, longPassages);
@@ -139,25 +139,27 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void DrawWeaveMaze(Graphics grap)
         {
+            using var gc = new GraphicsContext(grap);
             var renderer = new WeaveMazeRenderer();
             renderer.SetSize(canvas.Width, canvas.Height)
                     .SetField(mazeField)
                     .SetGates(mazeGates)
                     .SetRoundedCorners(showRoundedCorners.Checked)
-                    .Draw(grap);
+                    .Draw(gc);
         }
 
         private void DrawWeaveMazeSolution(Graphics grap)
         {
             if (!showSolution.Checked) return;
 
+            using var gc = new GraphicsContext(grap);
             var renderer = new WeaveMazeSolutionRenderer();
             renderer.SetSize(canvas.Width, canvas.Height)
                     .SetField(mazeField)
                     .SetSolution(mazeSolution)
                     .SetGates(mazeGates)
                     .SetRoundedCorners(showRoundedCorners.Checked)
-                    .Draw(grap);
+                    .Draw(gc);
         }
 
         #endregion

@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 
-namespace SimplexLab.WeaveMaze.TApplication
+namespace SimplexLab.WeaveMaze
 {
     /// <summary>
-    /// 迷宫解法路径渲染器。独立于迷宫墙壁渲染器，
-    /// 自行计算布局参数并管理 Graphics 状态。
+    /// 迷宫解法路径渲染器。平台无关实现，通过 IGraphicsContext 抽象绘图操作。
     /// </summary>
-    internal class WeaveMazeSolutionRenderer
+    public class WeaveMazeSolutionRenderer
     {
         private int width;
         private int height;
@@ -22,7 +19,7 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private float passageWidthFrac = DefaultPassageWidthFrac;
         private float lineWidthFrac = DefaultLineWidthFrac;
-        private Color solutionColor = Color.Red;
+        private MazeColor solutionColor = MazeColor.Red;
         private bool roundedCorners = true;
 
         private readonly WeaveMazeBuilder pathBuilder = new();
@@ -37,10 +34,10 @@ namespace SimplexLab.WeaveMaze.TApplication
         public WeaveMazeSolutionRenderer SetGates(WeaveMazeGate[]? gates) { this.gates = gates; return this; }
         public WeaveMazeSolutionRenderer SetPassageWidthFrac(float frac) { passageWidthFrac = frac; return this; }
         public WeaveMazeSolutionRenderer SetLineWidthFrac(float frac) { lineWidthFrac = frac; return this; }
-        public WeaveMazeSolutionRenderer SetSolutionColor(Color color) { solutionColor = color; return this; }
+        public WeaveMazeSolutionRenderer SetSolutionColor(MazeColor color) { solutionColor = color; return this; }
         public WeaveMazeSolutionRenderer SetRoundedCorners(bool value) { roundedCorners = value; pathBuilder.RoundedCorners = value; return this; }
 
-        public void Draw(Graphics grap)
+        public void Draw(IGraphicsContext context)
         {
             var cells = field.Cells;
             if (cells == null) return;
@@ -59,20 +56,18 @@ namespace SimplexLab.WeaveMaze.TApplication
             var r0 = (d1 - d0) / 2;
             var lineW = lineWidthFrac * cellSize;
 
-            var state = grap.Save();
-            grap.SmoothingMode = SmoothingMode.AntiAlias;
-            grap.PixelOffsetMode = PixelOffsetMode.Half;
-            grap.TranslateTransform(offsetX, offsetY);
+            // 平移变换
+            context.PushTranslate(offsetX, offsetY);
 
             BuildSolutionDirs(cells, mazeHeight, mazeWidth);
 
-            using var solPen = new Pen(solutionColor, lineW);
-            solPen.StartCap = LineCap.Round;
-            solPen.EndCap = LineCap.Round;
-            solPen.LineJoin = LineJoin.Round;
-            DrawSolutionPaths(grap, solPen, cells, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
+            // 构建并描边解路径
+            context.BeginPath();
+            DrawSolutionPaths(context, cells, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
+            context.EndPath();
+            context.StrokePath(solutionColor, lineW, true);
 
-            grap.Restore(state);
+            context.PopTransform();
         }
 
         #region 解路径方向构建
@@ -143,8 +138,7 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         #region 解路径绘制
 
-        private void DrawSolutionPaths(Graphics grap,
-                                       Pen pen,
+        private void DrawSolutionPaths(IGraphicsContext context,
                                        SquareCell[][] cells,
                                        int mazeHeight,
                                        int mazeWidth,
@@ -154,8 +148,6 @@ namespace SimplexLab.WeaveMaze.TApplication
                                        float dm,
                                        float r0)
         {
-            var path = new GraphicsPath();
-
             for (int i = 0; i < mazeHeight; i++)
             {
                 var oy = i * cellSize;
@@ -174,15 +166,15 @@ namespace SimplexLab.WeaveMaze.TApplication
                         // 南北跨越：upper 层走南北，lower 层走东西
                         if ((upperDir & 0b1010) != 0)
                         {
-                            pathBuilder.MoveTo(path, ox + dm, oy);
-                            pathBuilder.LineTo(path, ox + dm, oy + cellSize);
+                            pathBuilder.MoveTo(context, ox + dm, oy);
+                            pathBuilder.LineTo(context, ox + dm, oy + cellSize);
                         }
                         if ((lowerDir & 0b0101) != 0)
                         {
-                            pathBuilder.MoveTo(path, ox, oy + dm);
-                            pathBuilder.LineTo(path, ox + d0, oy + dm);
-                            pathBuilder.MoveTo(path, ox + d1, oy + dm);
-                            pathBuilder.LineTo(path, ox + cellSize, oy + dm);
+                            pathBuilder.MoveTo(context, ox, oy + dm);
+                            pathBuilder.LineTo(context, ox + d0, oy + dm);
+                            pathBuilder.MoveTo(context, ox + d1, oy + dm);
+                            pathBuilder.LineTo(context, ox + cellSize, oy + dm);
                         }
                     }
                     else if (cell.Upper.East != null)
@@ -190,72 +182,70 @@ namespace SimplexLab.WeaveMaze.TApplication
                         // 东西跨越：upper 层走东西，lower 层走南北
                         if ((upperDir & 0b0101) != 0)
                         {
-                            pathBuilder.MoveTo(path, ox, oy + dm);
-                            pathBuilder.LineTo(path, ox + cellSize, oy + dm);
+                            pathBuilder.MoveTo(context, ox, oy + dm);
+                            pathBuilder.LineTo(context, ox + cellSize, oy + dm);
                         }
                         if ((lowerDir & 0b1010) != 0)
                         {
-                            pathBuilder.MoveTo(path, ox + dm, oy);
-                            pathBuilder.LineTo(path, ox + dm, oy + d0);
-                            pathBuilder.MoveTo(path, ox + dm, oy + d1);
-                            pathBuilder.LineTo(path, ox + dm, oy + cellSize);
+                            pathBuilder.MoveTo(context, ox + dm, oy);
+                            pathBuilder.LineTo(context, ox + dm, oy + d0);
+                            pathBuilder.MoveTo(context, ox + dm, oy + d1);
+                            pathBuilder.LineTo(context, ox + dm, oy + cellSize);
                         }
                     }
                     else if (lowerDir != 0)
                     {
-                        DrawSolutionFlat(path, ox, oy, cellSize, dm, lowerDir);
+                        DrawSolutionFlat(context, ox, oy, cellSize, dm, lowerDir);
                     }
                 }
             }
-
-            grap.DrawPath(pen, path);
         }
 
-        private void DrawSolutionFlat(GraphicsPath path, float ox, float oy, float cellSize, float dm, int value)
+        private void DrawSolutionFlat(IGraphicsContext context, float ox, float oy, float cellSize, float dm, int value)
         {
             switch (value)
             {
                 case 0b1000:
-                    pathBuilder.MoveTo(path, ox + dm, oy);
-                    pathBuilder.LineTo(path, ox + dm, oy + dm);
+                    pathBuilder.MoveTo(context, ox + dm, oy);
+                    pathBuilder.LineTo(context, ox + dm, oy + dm);
                     break;
                 case 0b0100:
-                    pathBuilder.MoveTo(path, ox + cellSize, oy + dm);
-                    pathBuilder.LineTo(path, ox + dm, oy + dm);
+                    pathBuilder.MoveTo(context, ox + cellSize, oy + dm);
+                    pathBuilder.LineTo(context, ox + dm, oy + dm);
                     break;
                 case 0b0010:
-                    pathBuilder.MoveTo(path, ox + dm, oy + cellSize);
-                    pathBuilder.LineTo(path, ox + dm, oy + dm);
+                    pathBuilder.MoveTo(context, ox + dm, oy + cellSize);
+                    pathBuilder.LineTo(context, ox + dm, oy + dm);
                     break;
                 case 0b0001:
-                    pathBuilder.MoveTo(path, ox, oy + dm);
-                    pathBuilder.LineTo(path, ox + dm, oy + dm);
+                    pathBuilder.MoveTo(context, ox, oy + dm);
+                    pathBuilder.LineTo(context, ox + dm, oy + dm);
                     break;
 
                 case 0b1100:
-                    pathBuilder.MoveTo(path, ox + dm, oy);
-                    pathBuilder.ArcTo(path, ox + dm, oy + dm, ox + cellSize, oy + dm, dm);
+                    pathBuilder.MoveTo(context, ox + dm, oy);
+                    pathBuilder.ArcTo(context, ox + dm, oy + dm, ox + cellSize, oy + dm, dm);
                     break;
                 case 0b0110:
-                    pathBuilder.MoveTo(path, ox + cellSize, oy + dm);
-                    pathBuilder.ArcTo(path, ox + dm, oy + dm, ox + dm, oy + cellSize, dm);
+                    pathBuilder.MoveTo(context, ox + cellSize, oy + dm);
+                    pathBuilder.ArcTo(context, ox + dm, oy + dm, ox + dm, oy + cellSize, dm);
                     break;
                 case 0b0011:
-                    pathBuilder.MoveTo(path, ox + dm, oy + cellSize);
-                    pathBuilder.ArcTo(path, ox + dm, oy + dm, ox, oy + dm, dm);
+                    pathBuilder.MoveTo(context, ox + dm, oy + cellSize);
+                    pathBuilder.ArcTo(context, ox + dm, oy + dm, ox, oy + dm, dm);
                     break;
                 case 0b1001:
-                    pathBuilder.MoveTo(path, ox, oy + dm);
-                    pathBuilder.ArcTo(path, ox + dm, oy + dm, ox + dm, oy, dm);
+                    pathBuilder.MoveTo(context, ox, oy + dm);
+                    pathBuilder.ArcTo(context, ox + dm, oy + dm, ox + dm, oy, dm);
                     break;
 
                 case 0b1010:
-                    pathBuilder.MoveTo(path, ox + dm, oy);
-                    pathBuilder.LineTo(path, ox + dm, oy + cellSize);
+                    pathBuilder.MoveTo(context, ox + dm, oy);
+                    pathBuilder.LineTo(context, ox + dm, oy + cellSize);
                     break;
                 case 0b0101:
-                    pathBuilder.MoveTo(path, ox, oy + dm);
-                    pathBuilder.LineTo(path, ox + cellSize, oy + dm);
+                    pathBuilder.MoveTo(context, ox, oy + dm);
+                    pathBuilder.LineTo(context, ox + cellSize, oy + dm);
                     break;
             }
         }

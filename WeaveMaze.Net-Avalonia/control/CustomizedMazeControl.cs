@@ -16,8 +16,13 @@ namespace SimplexLab.WeaveMaze.TApplication
         private TextBox filename;
         private Button brower;
 
-        public CustomizedMazeControl()
+        private readonly bool showMaskPath;
+
+        public CustomizedMazeControl() : this(true) { }
+
+        public CustomizedMazeControl(bool showMaskPath)
         {
+            this.showMaskPath = showMaskPath;
             InitializeComponent();
         }
 
@@ -25,6 +30,13 @@ namespace SimplexLab.WeaveMaze.TApplication
         public double LoopFraction => (double)(loopFraction.Value ?? 0) / 100.0;
         public double CrossFraction => (double)(crossFraction.Value ?? 0) / 100.0;
         public bool LongPassages => longPassages.IsChecked == true;
+
+        public void SetReconstructionValues(int w, int h, double loopFrac, double crossFrac, bool longPass)
+        {
+            loopFraction.Value = (decimal)(loopFrac * 100);
+            crossFraction.Value = (decimal)(crossFrac * 100);
+            longPassages.IsChecked = longPass;
+        }
 
         private void InitializeComponent()
         {
@@ -55,58 +67,63 @@ namespace SimplexLab.WeaveMaze.TApplication
                 Content = "Long Passages",
             };
 
-            filename = new TextBox
-            {
-                IsReadOnly = true,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new Thickness(5, 0, 0, 0),
-            };
-
-            brower = new Button
-            {
-                Content = "...",
-                Width = 23,
-                VerticalAlignment = VerticalAlignment.Stretch,
-            };
-            brower.Click += OnBrowerClickedHandler;
-
             var panel = new StackPanel
             {
                 Orientation = Orientation.Vertical,
                 Spacing = 6,
                 Children =
                 {
-                    new Grid
-                    {
-                        ColumnDefinitions = ColumnDefinitions.Parse("95,*,Auto"),
-                        Children =
-                        {
-                            new TextBlock { Text = "Mask Path", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
-                            filename.WithGridColumn(1),
-                            brower.WithGridColumn(2),
-                        }
-                    },
-                    new Grid
-                    {
-                        ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
-                        Children =
-                        {
-                            new TextBlock { Text = "Loop  Fraction", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
-                            loopFraction.WithGridColumn(1),
-                        }
-                    },
-                    new Grid
-                    {
-                        ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
-                        Children =
-                        {
-                            new TextBlock { Text = "Cross Fraction", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
-                            crossFraction.WithGridColumn(1),
-                        }
-                    },
-                    longPassages,
                 }
             };
+
+            if (showMaskPath)
+            {
+                filename = new TextBox
+                {
+                    IsReadOnly = true,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Margin = new Thickness(5, 0, 0, 0),
+                };
+
+                brower = new Button
+                {
+                    Content = "...",
+                    Width = 23,
+                    VerticalAlignment = VerticalAlignment.Stretch,
+                };
+                brower.Click += OnBrowerClickedHandler;
+
+                panel.Children.Add(new Grid
+                {
+                    ColumnDefinitions = ColumnDefinitions.Parse("95,*,Auto"),
+                    Children =
+                    {
+                        new TextBlock { Text = "Mask Path", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                        filename.WithGridColumn(1),
+                        brower.WithGridColumn(2),
+                    }
+                });
+            }
+
+            panel.Children.Add(new Grid
+            {
+                ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
+                Children =
+                {
+                    new TextBlock { Text = "Loop  Fraction", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                    loopFraction.WithGridColumn(1),
+                }
+            });
+            panel.Children.Add(new Grid
+            {
+                ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
+                Children =
+                {
+                    new TextBlock { Text = "Cross Fraction", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                    crossFraction.WithGridColumn(1),
+                }
+            });
+            panel.Children.Add(longPassages);
 
             Content = panel;
         }

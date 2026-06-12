@@ -7,19 +7,28 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 
 namespace SimplexLab.WeaveMaze.TApplication
 {
     public partial class MainWindow : Window
     {
+        // Data - Generation page
         private WeaveMazeField? mazeField;
-        private WeaveMazeGenerator mazeGenerator = new();
         private WeaveMazeSolution mazeSolution;
-        private WeaveMazeSolutionGenerator solutionGenerator = new();
-        private WeaveMazeGateGenerator gateGenerator = new();
         private WeaveMazeGate[]? mazeGates;
 
-        // Controls
+        // Data - Reconstruction page
+        private WeaveMazeField? reconField;
+        private WeaveMazeSolution reconSolution;
+        private WeaveMazeGate[]? reconGates;
+
+        // Shared generators
+        private WeaveMazeGenerator mazeGenerator = new();
+        private WeaveMazeSolutionGenerator solutionGenerator = new();
+        private WeaveMazeGateGenerator gateGenerator = new();
+
+        // Controls - Generation page
         private ComboBox shape;
         private RectangularMazeControl rectangularMazeControl;
         private CustomizedMazeControl customizedMazeControl;
@@ -27,6 +36,17 @@ namespace SimplexLab.WeaveMaze.TApplication
         private CheckBox showRoundedCorners;
         private CheckBox showSolution;
         private MazeCanvas canvas;
+        private Button save;
+
+        // Controls - Reconstruction page
+        private TextBox reconFileName;
+        private Button reconBrowse;
+        private ComboBox reconShape;
+        private RectangularMazeControl reconRectangularMazeControl;
+        private CustomizedMazeControl reconCustomizedMazeControl;
+        private CheckBox reconShowRoundedCorners;
+        private CheckBox reconShowSolution;
+        private MazeCanvas reconCanvas;
 
         public MainWindow()
         {
@@ -89,7 +109,17 @@ namespace SimplexLab.WeaveMaze.TApplication
             };
             canvas.RenderRequested += OnCanvasRender;
 
-            // Left panel
+            save = new Button
+            {
+                Content = "Save",
+                VerticalAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(16, 8),
+                Background = Brushes.DodgerBlue,
+                Foreground = Brushes.White,
+            };
+            save.Click += OnSaveClickedHandler;
+
+            // --- Generation page: left panel ---
             var leftPanel = new StackPanel
             {
                 Orientation = Orientation.Vertical,
@@ -111,24 +141,31 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            // Right panel
+            // --- Generation page: right panel ---
             var rightPanel = new Grid
             {
                 RowDefinitions = RowDefinitions.Parse("*,Auto"),
                 Children =
                 {
                     canvas,
-                    new StackPanel
+                    new Grid
                     {
-                        Orientation = Orientation.Horizontal,
-                        Spacing = 16,
-                        HorizontalAlignment = HorizontalAlignment.Left,
+                        ColumnDefinitions = ColumnDefinitions.Parse("*,Auto"),
                         VerticalAlignment = VerticalAlignment.Bottom,
                         Margin = new Thickness(4),
                         Children =
                         {
-                            showRoundedCorners,
-                            showSolution,
+                            new StackPanel
+                            {
+                                Orientation = Orientation.Horizontal,
+                                Spacing = 16,
+                                Children =
+                                {
+                                    showRoundedCorners,
+                                    showSolution,
+                                }
+                            },
+                            save.WithGridColumn(1),
                         }
                     }.WithGridRow(1),
                 }
@@ -157,8 +194,8 @@ namespace SimplexLab.WeaveMaze.TApplication
                 Child = leftWithButton,
             };
 
-            // Main layout: fixed left + flexible right
-            var mainGrid = new Grid
+            // Generation page: fixed left + flexible right
+            var generationPage = new Grid
             {
                 ColumnDefinitions = ColumnDefinitions.Parse("300,*"),
                 Children =
@@ -168,11 +205,183 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
+            // --- Reconstruction page ---
+            reconFileName = new TextBox
+            {
+                IsReadOnly = true,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Margin = new Thickness(5, 0, 0, 0),
+            };
+
+            reconBrowse = new Button
+            {
+                Content = "...",
+                Width = 36,
+                Height = 36,
+                Background = Brushes.DodgerBlue,
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+            };
+            reconBrowse.Click += OnReconBrowseClickedHandler;
+
+            reconShape = new ComboBox
+            {
+                ItemsSource = new[] { "Rectangular", "Customized" },
+                SelectedIndex = 0,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Margin = new Thickness(5, 0, 0, 0),
+                IsEnabled = false,
+            };
+
+            reconRectangularMazeControl = new RectangularMazeControl
+            {
+                IsVisible = true,
+                IsEnabled = false,
+            };
+
+            reconCustomizedMazeControl = new CustomizedMazeControl(false)
+            {
+                IsVisible = false,
+                IsEnabled = false,
+            };
+
+            reconShowRoundedCorners = new CheckBox
+            {
+                Content = "Show as Rounded Corners",
+                IsChecked = true,
+            };
+            reconShowRoundedCorners.IsCheckedChanged += (s, e) => reconCanvas.InvalidateVisual();
+
+            reconShowSolution = new CheckBox
+            {
+                Content = "Show the Solution",
+                IsChecked = false,
+            };
+            reconShowSolution.IsCheckedChanged += (s, e) => reconCanvas.InvalidateVisual();
+
+            reconCanvas = new MazeCanvas
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+            };
+            reconCanvas.RenderRequested += OnReconCanvasRender;
+
+            // Top: file selector
+            var reconTopBar = new Grid
+            {
+                ColumnDefinitions = ColumnDefinitions.Parse("95,*,Auto"),
+                Margin = new Thickness(4),
+                Children =
+                {
+                    new TextBlock { Text = "Selection", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                    reconFileName.WithGridColumn(1),
+                    reconBrowse.WithGridColumn(2),
+                }
+            };
+
+            // Left panel (read-only parameters)
+            var reconLeftPanel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                Spacing = 6,
+                Margin = new Thickness(0),
+                Children =
+                {
+                    new Grid
+                    {
+                        ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
+                        Children =
+                        {
+                            new TextBlock { Text = "Shape", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                            reconShape.WithGridColumn(1),
+                        }
+                    },
+                    reconRectangularMazeControl,
+                    reconCustomizedMazeControl,
+                }
+            };
+
+            // Left panel wrapped in Border with right edge separator
+            var reconLeftBorder = new Border
+            {
+                BorderBrush = Brushes.LightGray,
+                BorderThickness = new Thickness(0, 0, 1, 0),
+                Padding = new Thickness(6),
+                Child = new ScrollViewer
+                {
+                    Content = reconLeftPanel,
+                },
+            };
+
+            // Right panel (canvas + checkboxes)
+            var reconRightPanel = new Grid
+            {
+                RowDefinitions = RowDefinitions.Parse("*,Auto"),
+                Children =
+                {
+                    reconCanvas,
+                    new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Spacing = 16,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Bottom,
+                        Margin = new Thickness(4),
+                        Children =
+                        {
+                            reconShowRoundedCorners,
+                            reconShowSolution,
+                        }
+                    }.WithGridRow(1),
+                }
+            };
+
+            // Below top bar: fixed left + flexible right
+            var reconContent = new Grid
+            {
+                ColumnDefinitions = ColumnDefinitions.Parse("300,*"),
+                Children =
+                {
+                    reconLeftBorder,
+                    reconRightPanel.WithGridColumn(1),
+                }
+            };
+
+            // Reconstruction page layout
+            var reconstructionPage = new Grid
+            {
+                RowDefinitions = RowDefinitions.Parse("Auto,*"),
+                Children =
+                {
+                    reconTopBar.WithGridRow(0),
+                    reconContent.WithGridRow(1),
+                }
+            };
+
+            // --- TabControl ---
+            var tabControl = new TabControl
+            {
+                Items =
+                {
+                    new TabItem
+                    {
+                        Header = "Generation",
+                        Content = generationPage,
+                    },
+                    new TabItem
+                    {
+                        Header = "Reconstruction",
+                        Content = reconstructionPage,
+                    },
+                }
+            };
+
             Title = "Weave Maze Generator v0.6.23";
             Width = 1200;
             Height = 800;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            Content = mainGrid;
+            Content = tabControl;
         }
 
         #region Handler
@@ -244,6 +453,114 @@ namespace SimplexLab.WeaveMaze.TApplication
             {
                 DrawWeaveMaze(context);
                 DrawWeaveMazeSolution(context);
+            }
+        }
+
+        private async void OnSaveClickedHandler(object? sender, RoutedEventArgs e)
+        {
+            if (mazeField == null) return;
+
+            var storageProvider = TopLevel.GetTopLevel(this)?.StorageProvider;
+            if (storageProvider == null) return;
+
+            var file = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save Maze",
+                DefaultExtension = "waze",
+                FileTypeChoices = new[]
+                {
+                    new FilePickerFileType("Weave Maze")
+                    {
+                        Patterns = new[] { "*.waze" }
+                    }
+                }
+            });
+
+            if (file == null) return;
+
+            using var stream = new MemoryStream();
+            var gates = mazeGates ?? Array.Empty<WeaveMazeGate>();
+            if (!WeaveMazeWriter.Write(mazeField, gates, stream)) return;
+
+            await using var fs = new FileStream(file.Path.LocalPath, FileMode.Create, FileAccess.Write);
+            stream.WriteTo(fs);
+        }
+
+        private async void OnReconBrowseClickedHandler(object? sender, RoutedEventArgs e)
+        {
+            var storageProvider = TopLevel.GetTopLevel(this)?.StorageProvider;
+            if (storageProvider == null) return;
+
+            var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Open Maze File",
+                AllowMultiple = false,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType("Weave Maze")
+                    {
+                        Patterns = new[] { "*.waze" }
+                    }
+                }
+            });
+
+            if (files.Count == 0) return;
+
+            var filePath = files[0].Path.LocalPath;
+            reconFileName.Text = filePath;
+
+            await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            var ms = new MemoryStream();
+            await fs.CopyToAsync(ms);
+            ms.Position = 0;
+
+            var (field, gates) = WeaveMazeReader.Read(ms);
+            if (field == null) return;
+
+            reconField = field;
+            reconGates = gates;
+            reconSolution = solutionGenerator.Generate(reconField);
+
+            // Update left panel to reflect loaded maze parameters
+            bool isCustomized = field is CustomizedWeaveMazeField;
+            reconShape.SelectedIndex = isCustomized ? 1 : 0;
+            reconRectangularMazeControl.IsVisible = !isCustomized;
+            reconCustomizedMazeControl.IsVisible = isCustomized;
+
+            if (isCustomized)
+            {
+                reconCustomizedMazeControl.SetReconstructionValues(field.Width, field.Height, field.LoopFrac, field.CrossFrac, field.LongPassages);
+            }
+            else
+            {
+                reconRectangularMazeControl.SetReconstructionValues(field.Width, field.Height, field.LoopFrac, field.CrossFrac, field.LongPassages);
+            }
+
+            reconCanvas.InvalidateVisual();
+        }
+
+        private void OnReconCanvasRender(DrawingContext context)
+        {
+            if (reconField == null) return;
+
+            using var gc = new GraphicsContext(context);
+            var renderer = new WeaveMazeRenderer();
+            renderer.SetSize((int)reconCanvas.Bounds.Width, (int)reconCanvas.Bounds.Height)
+                    .SetField(reconField)
+                    .SetGates(reconGates)
+                    .SetRoundedCorners(reconShowRoundedCorners.IsChecked == true)
+                    .Draw(gc);
+
+            if (reconShowSolution.IsChecked == true)
+            {
+                using var gc2 = new GraphicsContext(context);
+                var solRenderer = new WeaveMazeSolutionRenderer();
+                solRenderer.SetSize((int)reconCanvas.Bounds.Width, (int)reconCanvas.Bounds.Height)
+                           .SetField(reconField)
+                           .SetSolution(reconSolution)
+                           .SetGates(reconGates)
+                           .SetRoundedCorners(reconShowRoundedCorners.IsChecked == true)
+                           .Draw(gc2);
             }
         }
 

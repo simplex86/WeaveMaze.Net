@@ -29,21 +29,20 @@ namespace SimplexLab.WeaveMaze
         }
 
         /// <summary>
-        /// 创建单元格数组。根据遮罩决定每个单元格是否为白色。
+        /// 创建单元格白色遮罩。根据遮罩决定每个单元格是否为白色。
         /// </summary>
-        internal override SquareCell[][] CreateCells()
+        internal override bool[][] CreateCellWhiteMask()
         {
-            var cells = new SquareCell[Height][];
+            var mask = new bool[Height][];
             for (int i = Height - 1; i >= 0; --i)
             {
-                cells[i] = new SquareCell[Width];
+                mask[i] = new bool[Width];
                 for (int j = Width - 1; j >= 0; --j)
                 {
-                    bool white = Mask[i, j];
-                    cells[i][j] = new SquareCell(j, i, white);
+                    mask[i][j] = Mask[i, j];
                 }
             }
-            return cells;
+            return mask;
         }
     }
 }

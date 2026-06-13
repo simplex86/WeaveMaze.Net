@@ -25,8 +25,9 @@ namespace SimplexLab.WeaveMaze
         private readonly WeaveMazeBuilder pathBuilder = new();
 
         // 解路径方向位掩码：N=0b1000, E=0b0100, S=0b0010, W=0b0001
-        private Dictionary<SquareCell, int> lowerSolDirs = new();
-        private Dictionary<SquareCell, int> upperSolDirs = new();
+        // 键为单元格一维索引 (y * Width + x)
+        private Dictionary<int, int> lowerSolDirs = new();
+        private Dictionary<int, int> upperSolDirs = new();
 
         public WeaveMazeSolutionRenderer SetSize(int width, int height) { this.width = width; this.height = height; return this; }
         public WeaveMazeSolutionRenderer SetField(WeaveMazeField field) { this.field = field; return this; }
@@ -39,8 +40,8 @@ namespace SimplexLab.WeaveMaze
 
         public void Draw(IGraphicsContext context)
         {
-            var cells = field.Cells;
-            if (cells == null) return;
+            var graph = field.Graph;
+            if (graph == null) return;
 
             var mazeHeight = field.Height;
             var mazeWidth = field.Width;
@@ -59,11 +60,11 @@ namespace SimplexLab.WeaveMaze
             // 平移变换
             context.PushTranslate(offsetX, offsetY);
 
-            BuildSolutionDirs(cells, mazeHeight, mazeWidth);
+            BuildSolutionDirs(graph, mazeHeight, mazeWidth);
 
             // 构建并描边解路径
             context.BeginPath();
-            DrawSolutionPaths(context, cells, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
+            DrawSolutionPaths(context, graph, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
             context.EndPath();
             context.StrokePath(solutionColor, lineW, true);
 
@@ -74,10 +75,10 @@ namespace SimplexLab.WeaveMaze
 
         /// <summary>
         /// 从 WeaveMazeSolution.Path 构建每个单元格的解路径方向位掩码。
-        /// lowerSolDirs[cell] = lower 层的解路径方向（N=0b1000, E=0b0100, S=0b0010, W=0b0001）
-        /// upperSolDirs[cell] = upper 层的解路径方向
+        /// lowerSolDirs[cellIndex] = lower 层的解路径方向（N=0b1000, E=0b0100, S=0b0010, W=0b0001）
+        /// upperSolDirs[cellIndex] = upper 层的解路径方向
         /// </summary>
-        private void BuildSolutionDirs(SquareCell[][] cells, int height, int width)
+        private void BuildSolutionDirs(List<List<WeaveAdjacency>> graph, int height, int width)
         {
             lowerSolDirs.Clear();
             upperSolDirs.Clear();
@@ -85,44 +86,65 @@ namespace SimplexLab.WeaveMaze
             var solPath = solution.Path;
             if (solPath == null || solPath.Count == 0) return;
 
-            // 遍历路径中每对相邻节点，记录方向
+            // 遍历路径中每对相邻顶点，记录方向
             for (int i = 0; i < solPath.Count - 1; i++)
             {
-                var n0 = solPath[i];
-                var n1 = solPath[i + 1];
+                var v0 = solPath[i];
+                var v1 = solPath[i + 1];
 
-                if (n0.North == n1)
-                {
-                    AddDir(n0, 0b1000);
-                    AddDir(n1, 0b0010);
-                }
-                else if (n0.East == n1)
-                {
-                    AddDir(n0, 0b0100);
-                    AddDir(n1, 0b0001);
-                }
-                else if (n0.South == n1)
-                {
-                    AddDir(n0, 0b0010);
-                    AddDir(n1, 0b1000);
-                }
-                else if (n0.West == n1)
-                {
-                    AddDir(n0, 0b0001);
-                    AddDir(n1, 0b0100);
-                }
+                // 在 v0 的邻接表中查找 v1 的方向
+                int dir0 = FindDirection(graph, v0, v1);
+                // 反方向
+                int dir1 = OppositeDir(dir0);
+
+                AddDir(v0, dir0);
+                AddDir(v1, dir1);
             }
 
             // 为路径端点添加终端方向（从出入口数据获取）
             AddGateTerminalDirs();
         }
 
-        private void AddDir(SquareNode node, int dir)
+        /// <summary>
+        /// 在顶点 v0 的邻接表中查找指向 v1 的边方向。
+        /// </summary>
+        private static int FindDirection(List<List<WeaveAdjacency>> graph, int v0, int v1)
         {
-            var cell = node.Cell;
-            var dict = (node == cell.Upper) ? upperSolDirs : lowerSolDirs;
-            dict.TryGetValue(cell, out int existing);
-            dict[cell] = existing | dir;
+            foreach (var adj in graph[v0])
+            {
+                if (adj.Neighbor == v1) return adj.Direction;
+            }
+            return -1;
+        }
+
+        /// <summary>方向取反：0↔2, 1↔3</summary>
+        private static int OppositeDir(int dir) => dir switch
+        {
+            0 => 2,
+            1 => 3,
+            2 => 0,
+            3 => 1,
+            _ => -1
+        };
+
+        /// <summary>方向常量转位掩码</summary>
+        private static int DirToBit(int dir) => dir switch
+        {
+            0 => 0b1000,
+            1 => 0b0100,
+            2 => 0b0010,
+            3 => 0b0001,
+            _ => 0
+        };
+
+        private void AddDir(int vertex, int dir)
+        {
+            var cellX = field.VertexCellX![vertex];
+            var cellY = field.VertexCellY![vertex];
+            int cellIndex = field.CellIndex(cellX, cellY);
+            var dict = field.VertexIsUpper![vertex] ? upperSolDirs : lowerSolDirs;
+            dict.TryGetValue(cellIndex, out int existing);
+            dict[cellIndex] = existing | DirToBit(dir);
         }
 
         private void AddGateTerminalDirs()
@@ -130,7 +152,7 @@ namespace SimplexLab.WeaveMaze
             if (gates == null) return;
             foreach (var gate in gates)
             {
-                AddDir(gate.Cell.Lower, gate.DirectionBit);
+                AddDir(field.LowerIndex(gate.CellX, gate.CellY), gate.Direction);
             }
         }
 
@@ -139,7 +161,7 @@ namespace SimplexLab.WeaveMaze
         #region 解路径绘制
 
         private void DrawSolutionPaths(IGraphicsContext context,
-                                       SquareCell[][] cells,
+                                       List<List<WeaveAdjacency>> graph,
                                        int mazeHeight,
                                        int mazeWidth,
                                        float cellSize,
@@ -148,20 +170,24 @@ namespace SimplexLab.WeaveMaze
                                        float dm,
                                        float r0)
         {
+            var cellWhite = field.CellWhite!;
+            var cellOverNS = field.CellOverNS!;
+            var cellOverEW = field.CellOverEW!;
+
             for (int i = 0; i < mazeHeight; i++)
             {
                 var oy = i * cellSize;
                 for (int j = 0; j < mazeWidth; j++)
                 {
                     var ox = j * cellSize;
-                    var cell = cells[i][j];
+                    int cellIndex = field.CellIndex(j, i);
 
-                    if (!cell.White) continue;
+                    if (!cellWhite[cellIndex]) continue;
 
-                    var lowerDir = lowerSolDirs.TryGetValue(cell, out var ld) ? ld : 0;
-                    var upperDir = upperSolDirs.TryGetValue(cell, out var ud) ? ud : 0;
+                    var lowerDir = lowerSolDirs.TryGetValue(cellIndex, out var ld) ? ld : 0;
+                    var upperDir = upperSolDirs.TryGetValue(cellIndex, out var ud) ? ud : 0;
 
-                    if (cell.Upper.North != null)
+                    if (cellOverNS[cellIndex])
                     {
                         // 南北跨越：upper 层走南北，lower 层走东西
                         if ((upperDir & 0b1010) != 0)
@@ -177,7 +203,7 @@ namespace SimplexLab.WeaveMaze
                             pathBuilder.LineTo(context, ox + cellSize, oy + dm);
                         }
                     }
-                    else if (cell.Upper.East != null)
+                    else if (cellOverEW[cellIndex])
                     {
                         // 东西跨越：upper 层走东西，lower 层走南北
                         if ((upperDir & 0b0101) != 0)

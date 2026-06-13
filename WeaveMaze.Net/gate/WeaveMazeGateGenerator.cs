@@ -33,16 +33,15 @@ namespace SimplexLab.WeaveMaze
         /// <returns>出入口数组</returns>
         public WeaveMazeGate[] Generate(WeaveMazeField field, WeaveMazeSolution solution)
         {
-            var cells = field.Cells;
-            if (cells == null || !solution.IsValid) return Array.Empty<WeaveMazeGate>();
+            if (field.CellWhite == null || !solution.IsValid) return Array.Empty<WeaveMazeGate>();
 
             var gates = new List<WeaveMazeGate>();
             var path = solution.Path;
 
-            var entryGate = CreateGate(cells, field.Height, field.Width, path[0]);
+            var entryGate = CreateGate(field, path[0]);
             if (entryGate != null) gates.Add(entryGate);
 
-            var exitGate = CreateGate(cells, field.Height, field.Width, path[path.Count - 1]);
+            var exitGate = CreateGate(field, path[path.Count - 1]);
             if (exitGate != null) gates.Add(exitGate);
 
             return gates.ToArray();
@@ -57,11 +56,13 @@ namespace SimplexLab.WeaveMaze
         }
 
         /// <summary>
-        /// 为指定节点创建出入口。在节点所在单元格的边界方向中随机选择一个方向作为出入口方向。
+        /// 为指定顶点创建出入口。在顶点所属单元格的边界方向中随机选择一个方向作为出入口方向。
         /// </summary>
-        private WeaveMazeGate? CreateGate(SquareCell[][] cells, int height, int width, SquareNode node)
+        private WeaveMazeGate? CreateGate(WeaveMazeField field, int vertex)
         {
-            var cell = node.Cell;
+            int cellIndex = vertex / 2;
+            int x = cellIndex % field.Width;
+            int y = cellIndex / field.Width;
             var permutation = Permutations[random.Next(Permutations.Length)];
 
             for (int i = permutation.Length - 1; i >= 0; --i)
@@ -69,20 +70,20 @@ namespace SimplexLab.WeaveMaze
                 switch (permutation[i])
                 {
                     case 0: // 北
-                        if (cell.Y == 0 || !cells[cell.Y - 1][cell.X].White)
-                            return new WeaveMazeGate(cell, 0);
+                        if (y == 0 || !field.CellWhite[field.CellIndex(x, y - 1)])
+                            return new WeaveMazeGate(x, y, 0);
                         break;
                     case 1: // 东
-                        if (cell.X == width - 1 || !cells[cell.Y][cell.X + 1].White)
-                            return new WeaveMazeGate(cell, 1);
+                        if (x == field.Width - 1 || !field.CellWhite[field.CellIndex(x + 1, y)])
+                            return new WeaveMazeGate(x, y, 1);
                         break;
                     case 2: // 南
-                        if (cell.Y == height - 1 || !cells[cell.Y + 1][cell.X].White)
-                            return new WeaveMazeGate(cell, 2);
+                        if (y == field.Height - 1 || !field.CellWhite[field.CellIndex(x, y + 1)])
+                            return new WeaveMazeGate(x, y, 2);
                         break;
                     default: // 西
-                        if (cell.X == 0 || !cells[cell.Y][cell.X - 1].White)
-                            return new WeaveMazeGate(cell, 3);
+                        if (x == 0 || !field.CellWhite[field.CellIndex(x - 1, y)])
+                            return new WeaveMazeGate(x, y, 3);
                         break;
                 }
             }

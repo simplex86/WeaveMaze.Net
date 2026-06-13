@@ -12,7 +12,7 @@ namespace SimplexLab.WeaveMaze
         private int height;
         private WeaveMazeField field;
         private WeaveMazeGate[]? gates;
-        private readonly Dictionary<SquareCell, int> gateDirs = new();
+        private readonly Dictionary<(int x, int y), int> gateDirs = new();
 
         private const float DefaultPassageWidthFrac = 0.7f;
         private const float DefaultLineWidthFrac = 0.05f;
@@ -36,8 +36,9 @@ namespace SimplexLab.WeaveMaze
             {
                 foreach (var gate in gates)
                 {
-                    gateDirs.TryGetValue(gate.Cell, out int existing);
-                    gateDirs[gate.Cell] = existing | gate.DirectionBit;
+                    var key = (gate.CellX, gate.CellY);
+                    gateDirs.TryGetValue(key, out int existing);
+                    gateDirs[key] = existing | gate.DirectionBit;
                 }
             }
             return this;
@@ -50,8 +51,13 @@ namespace SimplexLab.WeaveMaze
 
         public void Draw(IGraphicsContext context)
         {
-            var cells = field.Cells;
-            if (cells == null) return;
+            var graph = field.Graph;
+            if (graph == null) return;
+
+            var cellWhite = field.CellWhite;
+            var cellOverNS = field.CellOverNS;
+            var cellOverEW = field.CellOverEW;
+            if (cellWhite == null || cellOverNS == null || cellOverEW == null) return;
 
             var mazeHeight = field.Height;
             var mazeWidth  = field.Width;
@@ -76,7 +82,7 @@ namespace SimplexLab.WeaveMaze
 
             // 构建并描边墙壁路径
             context.BeginPath();
-            DrawWallPaths(context, cells, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
+            DrawWallPaths(context, graph, cellWhite, cellOverNS, cellOverEW, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
             context.EndPath();
             context.StrokePath(wallColor, lineW, roundedCorners);
 
@@ -85,8 +91,18 @@ namespace SimplexLab.WeaveMaze
 
         #region 墙壁绘制
 
+        private static bool HasDir(List<List<WeaveAdjacency>> graph, int vertex, int direction)
+        {
+            foreach (var adj in graph[vertex])
+                if (adj.Direction == direction) return true;
+            return false;
+        }
+
         private void DrawWallPaths(IGraphicsContext context,
-                                   SquareCell[][] cells,
+                                   List<List<WeaveAdjacency>> graph,
+                                   bool[] cellWhite,
+                                   bool[] cellOverNS,
+                                   bool[] cellOverEW,
                                    int mazeHeight,
                                    int mazeWidth,
                                    float cellSize,
@@ -101,27 +117,27 @@ namespace SimplexLab.WeaveMaze
                 for (int j = 0; j < mazeWidth; j++)
                 {
                     var ox = j * cellSize;
-                    var cell = cells[i][j];
+                    var ci = field.CellIndex(j, i);
 
-                    if (!cell.White) continue;
+                    if (!cellWhite[ci]) continue;
 
-                    if (cell.Upper.North != null)
+                    if (cellOverNS[ci])
                     {
                         DrawWallNorthSouthOver(context, ox, oy, cellSize, d0, d1);
                     }
-                    else if (cell.Upper.East != null)
+                    else if (cellOverEW[ci])
                     {
                         DrawWallEastWestOver(context, ox, oy, cellSize, d0, d1);
                     }
                     else
                     {
-                        var lower = cell.Lower;
-                        int value = (lower.North != null ? 0b1000 : 0) |
-                                    (lower.East  != null ? 0b0100 : 0) |
-                                    (lower.South != null ? 0b0010 : 0) |
-                                    (lower.West  != null ? 0b0001 : 0);
+                        var lower = field.LowerIndex(j, i);
+                        int value = (HasDir(graph, lower, 0) ? 0b1000 : 0) |
+                                    (HasDir(graph, lower, 1) ? 0b0100 : 0) |
+                                    (HasDir(graph, lower, 2) ? 0b0010 : 0) |
+                                    (HasDir(graph, lower, 3) ? 0b0001 : 0);
 
-                        if (gateDirs.TryGetValue(cell, out int gateBits))
+                        if (gateDirs.TryGetValue((j, i), out int gateBits))
                         {
                             value |= gateBits;
                         }

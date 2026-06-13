@@ -377,7 +377,7 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            Title = "SimplexLab-WeaveMaze v0.7.27";
+            Title = "SimplexLab-WeaveMaze v0.8.28";
             Width = 1200;
             Height = 800;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -478,12 +478,8 @@ namespace SimplexLab.WeaveMaze.TApplication
 
             if (file == null) return;
 
-            using var stream = new MemoryStream();
             var gates = mazeGates ?? Array.Empty<WeaveMazeGate>();
-            if (!WeaveMazeWriter.Write(mazeField, gates, stream)) return;
-
-            await using var fs = new FileStream(file.Path.LocalPath, FileMode.Create, FileAccess.Write);
-            stream.WriteTo(fs);
+            WeaveMazeWriter.Write(mazeField, gates, mazeSolution, file.Path.LocalPath);
         }
 
         private async void OnReconBrowseClickedHandler(object? sender, RoutedEventArgs e)
@@ -509,13 +505,8 @@ namespace SimplexLab.WeaveMaze.TApplication
             var filePath = files[0].Path.LocalPath;
             reconFileName.Text = filePath;
 
-            await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            var ms = new MemoryStream();
-            await fs.CopyToAsync(ms);
-            ms.Position = 0;
-
-            var (field, gates) = WeaveMazeReader.Read(ms);
-            if (field == null) return;
+            var field = WeaveMazeReader.ReadField(filePath);
+            var gates = WeaveMazeReader.ReadGates(filePath);
 
             reconField = field;
             reconGates = gates;

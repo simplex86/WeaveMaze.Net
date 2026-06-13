@@ -1,10 +1,16 @@
 using System;
+using System.Collections.Generic;
 
 namespace SimplexLab.WeaveMaze
 {
     /// <summary>
     /// 编织式迷宫字段基类，用于存储迷宫的生成参数和结果数据。
     /// 渲染时可完全基于此结构中的参数和数据完成。
+    ///
+    /// 顶点编号规则：每个单元格 (x, y) 拥有两个顶点：
+    ///   Lower 顶点索引 = (y * Width + x) * 2
+    ///   Upper 顶点索引 = (y * Width + x) * 2 + 1
+    /// 总顶点数 = Width * Height * 2
     /// </summary>
     public abstract class WeaveMazeField
     {
@@ -64,23 +70,50 @@ namespace SimplexLab.WeaveMaze
         #region 生成结果
 
         /// <summary>
-        /// 生成的迷宫单元格数据。索引为 [y][x]，即 [行][列]。
+        /// 邻接表（图）。每个顶点的邻接表存储该顶点的所有出边。
         /// 在调用 Generate 之前为 null。
-        /// 每个单元格的 Lower 和 Upper 节点的四方向连接（North/East/South/West）
-        /// 描述了迷宫的通道结构；xxx2 字段描述了解路径。
         /// </summary>
-        internal SquareCell[][]? Cells { get; set; }
+        internal List<List<WeaveAdjacency>>? Graph { get; set; }
+
+        /// <summary>顶点总数 = Width * Height * 2</summary>
+        internal int VertexCount { get; set; }
+
+        /// <summary>每个顶点所属单元格的列坐标（x）</summary>
+        internal int[]? VertexCellX { get; set; }
+
+        /// <summary>每个顶点所属单元格的行坐标（y）</summary>
+        internal int[]? VertexCellY { get; set; }
+
+        /// <summary>每个顶点是否为 Upper 层</summary>
+        internal bool[]? VertexIsUpper { get; set; }
+
+        /// <summary>每个单元格是否可用（白色区域）</summary>
+        internal bool[]? CellWhite { get; set; }
+
+        /// <summary>每个单元格是否有南北向跨越（Upper 层走南北）</summary>
+        internal bool[]? CellOverNS { get; set; }
+
+        /// <summary>每个单元格是否有东西向跨越（Upper 层走东西）</summary>
+        internal bool[]? CellOverEW { get; set; }
+
+        #endregion
+
+        #region 索引计算
+
+        /// <summary>获取单元格 (x, y) 的 Lower 顶点索引</summary>
+        internal int LowerIndex(int x, int y) => (y * Width + x) * 2;
+
+        /// <summary>获取单元格 (x, y) 的 Upper 顶点索引</summary>
+        internal int UpperIndex(int x, int y) => (y * Width + x) * 2 + 1;
+
+        /// <summary>获取单元格 (x, y) 的一维索引</summary>
+        internal int CellIndex(int x, int y) => y * Width + x;
 
         #endregion
 
         /// <summary>
         /// 创建编织式迷宫字段
         /// </summary>
-        /// <param name="width">迷宫宽度（列数）</param>
-        /// <param name="height">迷宫高度（行数）</param>
-        /// <param name="loopFrac">环比例（0~1）</param>
-        /// <param name="crossFrac">交叉比例（0~1）</param>
-        /// <param name="longPassages">是否启用长通道模式</param>
         protected WeaveMazeField(int width, int height, double loopFrac, double crossFrac, bool longPassages)
         {
             Width = width;
@@ -88,12 +121,12 @@ namespace SimplexLab.WeaveMaze
             LoopFrac = loopFrac;
             CrossFrac = crossFrac;
             LongPassages = longPassages;
-            Cells = null;
         }
 
         /// <summary>
-        /// 创建单元格数组。由子类实现，根据是否有遮罩决定单元格的 White 属性。
+        /// 创建单元格白色遮罩。由子类实现，根据是否有遮罩决定每个单元格是否可用。
+        /// 返回 bool[][]，索引为 [y][x]，true 表示可用。
         /// </summary>
-        internal abstract SquareCell[][] CreateCells();
+        internal abstract bool[][] CreateCellWhiteMask();
     }
 }

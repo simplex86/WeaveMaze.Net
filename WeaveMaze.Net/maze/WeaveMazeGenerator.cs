@@ -10,669 +10,441 @@ namespace SimplexLab.WeaveMaze
     /// </summary>
     public class WeaveMazeGenerator
     {
-        /// <summary>
-        /// 0-3 的所有 24 种排列，用于随机选择方向
-        /// </summary>
         private static readonly int[][] Permutations = GeneratePermutations();
+
+        private const int N = 0, E = 1, S = 2, W = 3;
+        private static readonly int[] Dy = { -1, 0, 1, 0 };
+        private static readonly int[] Dx = { 0, 1, 0, -1 };
 
         private readonly Random random;
 
-        public WeaveMazeGenerator()
-            : this(Random.Shared)
-        {
-        }
+        public WeaveMazeGenerator() : this(Random.Shared) { }
+        public WeaveMazeGenerator(Random random) { this.random = random; }
 
-        public WeaveMazeGenerator(Random random)
-        {
-            this.random = random;
-        }
-
-        /// <summary>
-        /// 同步生成迷宫
-        /// </summary>
-        /// <param name="field">迷宫字段，包含生成参数和遮罩</param>
-        /// <returns>包含生成结果的字段</returns>
         public WeaveMazeField Generate(WeaveMazeField field)
         {
-            var cells = field.CreateCells();
-            AddLoopsAndCrosses(cells, field.Height, field.Width, field.LoopFrac, field.CrossFrac);
-            var regions = AssignRegions(cells, field.Height, field.Width);
-            CreateSpanningTree(cells, field.Height, field.Width, regions, field.LongPassages);
-
-            field.Cells = cells;
+            InitializeGraph(field);
+            AddLoopsAndCrosses(field);
+            var (region, regionNodes) = AssignRegions(field);
+            CreateSpanningTree(field, region, regionNodes);
+            FinalizeField(field);
             return field;
         }
 
-        /// <summary>
-        /// 异步生成迷宫
-        /// </summary>
-        /// <param name="field">迷宫字段，包含生成参数和遮罩</param>
-        /// <returns>包含生成结果的字段</returns>
         public async Task<WeaveMazeField> GenerateAsync(WeaveMazeField field)
         {
             return await Task.Run(() => Generate(field));
         }
 
-        #region 环和交叉添加
+        #region 图初始化
 
-        /// <summary>
-        /// 在迷宫中添加环（Loop）和交叉（Cross）结构，形成编织式迷宫的跨越特征。
-        /// 先添加环，再添加交叉。每次添加后验证不产生图论环路，否则回滚。
-        /// </summary>
-        private void AddLoopsAndCrosses(SquareCell[][] cells, int height, int width, double loopFraction, double crossFraction)
+        private void InitializeGraph(WeaveMazeField field)
         {
-            // 收集内部可用单元格（排除边界，因为环和交叉需要四方向邻居）
-            var cellList = new List<SquareCell>();
-            for (int i = height - 2; i >= 1; --i)
+            int width = field.Width;
+            int height = field.Height;
+            int cellCount = width * height;
+            int vertexCount = cellCount * 2;
+
+            var graph = new List<List<WeaveAdjacency>>(vertexCount);
+            for (int i = 0; i < vertexCount; i++)
+                graph.Add(new List<WeaveAdjacency>());
+
+            var cellWhite = new bool[cellCount];
+            var vertexCellX = new int[vertexCount];
+            var vertexCellY = new int[vertexCount];
+            var vertexIsUpper = new bool[vertexCount];
+
+            var whiteMask = field.CreateCellWhiteMask();
+            for (int y = 0; y < height; y++)
             {
-                for (int j = width - 2; j >= 1; --j)
+                for (int x = 0; x < width; x++)
                 {
-                    if (cells[i][j].White)
-                    {
-                        cellList.Add(cells[i][j]);
-                    }
+                    int ci = field.CellIndex(x, y);
+                    cellWhite[ci] = whiteMask[y][x];
+
+                    int lower = field.LowerIndex(x, y);
+                    int upper = field.UpperIndex(x, y);
+
+                    vertexCellX[lower] = x; vertexCellY[lower] = y; vertexIsUpper[lower] = false;
+                    vertexCellX[upper] = x; vertexCellY[upper] = y; vertexIsUpper[upper] = true;
                 }
             }
 
+            field.Graph = graph;
+            field.VertexCount = vertexCount;
+            field.CellWhite = cellWhite;
+            field.VertexCellX = vertexCellX;
+            field.VertexCellY = vertexCellY;
+            field.VertexIsUpper = vertexIsUpper;
+            field.CellOverNS = new bool[cellCount];
+            field.CellOverEW = new bool[cellCount];
+        }
+
+        #endregion
+
+        #region 环和交叉添加
+
+        private void AddLoopsAndCrosses(WeaveMazeField field)
+        {
+            var graph = field.Graph!;
+            int height = field.Height;
+            int width = field.Width;
+
+            var cellList = new List<int>();
+            for (int i = height - 2; i >= 1; --i)
+                for (int j = width - 2; j >= 1; --j)
+                {
+                    int ci = field.CellIndex(j, i);
+                    if (field.CellWhite![ci])
+                        cellList.Add(ci);
+                }
+
             // 阶段1：添加环
             int loops = 0;
-            int maxLoops = (int)Math.Round(cellList.Count * loopFraction);
+            int maxLoops = (int)Math.Round(cellList.Count * field.LoopFrac);
             while (loops < maxLoops && cellList.Count > 0)
             {
                 int index = (int)(cellList.Count * random.NextDouble());
-                var cell = cellList[index];
+                int ci = cellList[index];
                 cellList.RemoveAt(index);
+                int x = ci % width, y = ci / width;
 
                 var permutation = Permutations[random.Next(Permutations.Length)];
                 for (int i = permutation.Length - 1; i >= 0; --i)
                 {
-                    bool northSouthHopsEastWest = random.NextDouble() < 0.5;
-                    if (TryAddLoop(cells, height, width, cell, permutation[i], northSouthHopsEastWest))
-                    {
-                        ++loops;
-                        break;
-                    }
-                    if (TryAddLoop(cells, height, width, cell, permutation[i], !northSouthHopsEastWest))
-                    {
-                        ++loops;
-                        break;
-                    }
+                    bool nsHopsEw = random.NextDouble() < 0.5;
+                    if (TryAddLoop(field, x, y, permutation[i], nsHopsEw)) { ++loops; break; }
+                    if (TryAddLoop(field, x, y, permutation[i], !nsHopsEw)) { ++loops; break; }
                 }
             }
 
-            // 收集剩余平坦的内部单元格用于交叉
+            // 收集剩余平坦的内部单元格
             cellList.Clear();
             for (int i = height - 2; i >= 1; --i)
-            {
                 for (int j = width - 2; j >= 1; --j)
                 {
-                    if (cells[i][j].White && cells[i][j].IsFlat())
-                    {
-                        cellList.Add(cells[i][j]);
-                    }
+                    int ci = field.CellIndex(j, i);
+                    if (field.CellWhite![ci] && !IsCellNotFlat(graph, field, j, i))
+                        cellList.Add(ci);
                 }
-            }
 
             // 阶段2：添加交叉
             int crosses = 0;
-            int maxCrosses = (int)Math.Round(cellList.Count * crossFraction);
+            int maxCrosses = (int)Math.Round(cellList.Count * field.CrossFrac);
             while (crosses < maxCrosses && cellList.Count > 0)
             {
                 int index = (int)(cellList.Count * random.NextDouble());
-                var cell = cellList[index];
+                int ci = cellList[index];
                 cellList.RemoveAt(index);
+                int x = ci % width, y = ci / width;
 
-                bool northSouthHopsEastWest = random.NextDouble() < 0.5;
-                if (AddCross(cells, cell, northSouthHopsEastWest))
-                {
-                    ++crosses;
-                }
-                else if (AddCross(cells, cell, !northSouthHopsEastWest))
-                {
-                    ++crosses;
-                }
+                bool nsHopsEw = random.NextDouble() < 0.5;
+                if (AddCross(field, x, y, nsHopsEw)) { ++crosses; }
+                else if (AddCross(field, x, y, !nsHopsEw)) { ++crosses; }
             }
         }
 
-        /// <summary>
-        /// 尝试添加指定方向的环
-        /// </summary>
-        private bool TryAddLoop(SquareCell[][] cells, int height, int width, SquareCell cell, int direction, bool northSouthHopsEastWest)
+        private bool TryAddLoop(WeaveMazeField field, int x, int y, int direction, bool nsHopsEw)
         {
             return direction switch
             {
-                0 => AddNorthEastLoop(cells, cell, northSouthHopsEastWest),
-                1 => AddSouthEastLoop(cells, cell, northSouthHopsEastWest),
-                2 => AddSouthWestLoop(cells, cell, northSouthHopsEastWest),
-                _ => AddNorthWestLoop(cells, cell, northSouthHopsEastWest),
+                0 => AddNorthEastLoop(field, x, y, nsHopsEw),
+                1 => AddSouthEastLoop(field, x, y, nsHopsEw),
+                2 => AddSouthWestLoop(field, x, y, nsHopsEw),
+                _ => AddNorthWestLoop(field, x, y, nsHopsEw),
             };
         }
 
-        /// <summary>
-        /// 添加东北方向环
-        /// </summary>
-        private bool AddNorthEastLoop(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
+        private bool AddNorthEastLoop(WeaveMazeField field, int x, int y, bool nsHopsEw)
         {
-            var northCell = cells[cell.Y - 1][cell.X];
-            if (!northCell.White || northCell.IsNotFlat()) return false;
+            var graph = field.Graph!;
+            int nx = x, ny = y - 1, nex = x + 1, ney = y - 1;
+            int ex = x + 1, ey = y, sx = x, sy = y + 1, wx = x - 1, wy = y;
 
-            var northEastCell = cells[cell.Y - 1][cell.X + 1];
-            if (!northEastCell.White || northEastCell.IsNotFlat()) return false;
+            if (!IsCellWhite(field, nx, ny) || IsCellNotFlat(graph, field, nx, ny)) return false;
+            if (!IsCellWhite(field, nex, ney) || IsCellNotFlat(graph, field, nex, ney)) return false;
+            if (!IsCellWhite(field, ex, ey) || IsCellNotFlat(graph, field, ex, ey)) return false;
+            if (!IsCellWhite(field, sx, sy)) return false;
+            if (!IsCellWhite(field, wx, wy)) return false;
 
-            var eastCell = cells[cell.Y][cell.X + 1];
-            if (!eastCell.White || eastCell.IsNotFlat()) return false;
+            var backup = BackupAffectedVertices(graph, field, x, y, new[] { (nex, ney) });
+            WireCross(graph, field, x, y, nx, ny, ex, ey, sx, sy, wx, wy, nsHopsEw);
+            if (!HasDir(graph, field.LowerIndex(nx, ny), E))
+                AddEdge(graph, field.LowerIndex(nx, ny), E, field.LowerIndex(nex, ney), W);
+            if (!HasDir(graph, field.LowerIndex(ex, ey), N))
+                AddEdge(graph, field.LowerIndex(ex, ey), N, field.LowerIndex(nex, ney), S);
 
-            var southCell = cells[cell.Y + 1][cell.X];
-            if (!southCell.White) return false;
+            if (FindLoop(graph, field.VertexCount, field.LowerIndex(x, y)) ||
+                FindLoop(graph, field.VertexCount, field.UpperIndex(x, y)))
+            { RestoreAffectedVertices(graph, backup); return false; }
+            return true;
+        }
 
-            var westCell = cells[cell.Y][cell.X - 1];
-            if (!westCell.White) return false;
+        private bool AddSouthEastLoop(WeaveMazeField field, int x, int y, bool nsHopsEw)
+        {
+            var graph = field.Graph!;
+            int sx = x, sy = y + 1, sex = x + 1, sey = y + 1;
+            int ex = x + 1, ey = y, nx = x, ny = y - 1, wx = x - 1, wy = y;
 
-            cell.Backup();
-            northCell.Backup();
-            northEastCell.Backup();
-            eastCell.Backup();
-            southCell.Backup();
-            westCell.Backup();
+            if (!IsCellWhite(field, sx, sy) || IsCellNotFlat(graph, field, sx, sy)) return false;
+            if (!IsCellWhite(field, sex, sey) || IsCellNotFlat(graph, field, sex, sey)) return false;
+            if (!IsCellWhite(field, ex, ey) || IsCellNotFlat(graph, field, ex, ey)) return false;
+            if (!IsCellWhite(field, nx, ny)) return false;
+            if (!IsCellWhite(field, wx, wy)) return false;
 
-            WireCross(cell, northCell, eastCell, southCell, westCell, northSouthHopsEastWest);
+            var backup = BackupAffectedVertices(graph, field, x, y, new[] { (sex, sey) });
+            WireCross(graph, field, x, y, nx, ny, ex, ey, sx, sy, wx, wy, nsHopsEw);
+            if (!HasDir(graph, field.LowerIndex(sx, sy), E))
+                AddEdge(graph, field.LowerIndex(sx, sy), E, field.LowerIndex(sex, sey), W);
+            if (!HasDir(graph, field.LowerIndex(ex, ey), S))
+                AddEdge(graph, field.LowerIndex(ex, ey), S, field.LowerIndex(sex, sey), N);
 
-            if (northCell.Lower.East == null)
-            {
-                northCell.Lower.East = northEastCell.Lower;
-                northEastCell.Lower.West = northCell.Lower;
-            }
-            if (eastCell.Lower.North == null)
-            {
-                eastCell.Lower.North = northEastCell.Lower;
-                northEastCell.Lower.South = eastCell.Lower;
-            }
+            if (FindLoop(graph, field.VertexCount, field.LowerIndex(x, y)) ||
+                FindLoop(graph, field.VertexCount, field.UpperIndex(x, y)))
+            { RestoreAffectedVertices(graph, backup); return false; }
+            return true;
+        }
 
-            if (FindLoop(cells, cell.Lower) || FindLoop(cells, cell.Upper))
-            {
-                cell.Restore();
-                northCell.Restore();
-                northEastCell.Restore();
-                eastCell.Restore();
-                southCell.Restore();
-                westCell.Restore();
-                return false;
-            }
+        private bool AddSouthWestLoop(WeaveMazeField field, int x, int y, bool nsHopsEw)
+        {
+            var graph = field.Graph!;
+            int sx = x, sy = y + 1, swx = x - 1, swy = y + 1;
+            int wx = x - 1, wy = y, nx = x, ny = y - 1, ex = x + 1, ey = y;
 
+            if (!IsCellWhite(field, sx, sy) || IsCellNotFlat(graph, field, sx, sy)) return false;
+            if (!IsCellWhite(field, swx, swy) || IsCellNotFlat(graph, field, swx, swy)) return false;
+            if (!IsCellWhite(field, wx, wy) || IsCellNotFlat(graph, field, wx, wy)) return false;
+            if (!IsCellWhite(field, nx, ny)) return false;
+            if (!IsCellWhite(field, ex, ey)) return false;
+
+            var backup = BackupAffectedVertices(graph, field, x, y, new[] { (swx, swy) });
+            WireCross(graph, field, x, y, nx, ny, ex, ey, sx, sy, wx, wy, nsHopsEw);
+            if (!HasDir(graph, field.LowerIndex(sx, sy), W))
+                AddEdge(graph, field.LowerIndex(sx, sy), W, field.LowerIndex(swx, swy), E);
+            if (!HasDir(graph, field.LowerIndex(wx, wy), S))
+                AddEdge(graph, field.LowerIndex(wx, wy), S, field.LowerIndex(swx, swy), N);
+
+            if (FindLoop(graph, field.VertexCount, field.LowerIndex(x, y)) ||
+                FindLoop(graph, field.VertexCount, field.UpperIndex(x, y)))
+            { RestoreAffectedVertices(graph, backup); return false; }
+            return true;
+        }
+
+        private bool AddNorthWestLoop(WeaveMazeField field, int x, int y, bool nsHopsEw)
+        {
+            var graph = field.Graph!;
+            int nx = x, ny = y - 1, nwx = x - 1, nwy = y - 1;
+            int wx = x - 1, wy = y, sx = x, sy = y + 1, ex = x + 1, ey = y;
+
+            if (!IsCellWhite(field, nx, ny) || IsCellNotFlat(graph, field, nx, ny)) return false;
+            if (!IsCellWhite(field, nwx, nwy) || IsCellNotFlat(graph, field, nwx, nwy)) return false;
+            if (!IsCellWhite(field, wx, wy) || IsCellNotFlat(graph, field, wx, wy)) return false;
+            if (!IsCellWhite(field, sx, sy)) return false;
+            if (!IsCellWhite(field, ex, ey)) return false;
+
+            var backup = BackupAffectedVertices(graph, field, x, y, new[] { (nwx, nwy) });
+            WireCross(graph, field, x, y, nx, ny, ex, ey, sx, sy, wx, wy, nsHopsEw);
+            if (!HasDir(graph, field.LowerIndex(nx, ny), W))
+                AddEdge(graph, field.LowerIndex(nx, ny), W, field.LowerIndex(nwx, nwy), E);
+            if (!HasDir(graph, field.LowerIndex(wx, wy), N))
+                AddEdge(graph, field.LowerIndex(wx, wy), N, field.LowerIndex(nwx, nwy), S);
+
+            if (FindLoop(graph, field.VertexCount, field.LowerIndex(x, y)) ||
+                FindLoop(graph, field.VertexCount, field.UpperIndex(x, y)))
+            { RestoreAffectedVertices(graph, backup); return false; }
+            return true;
+        }
+
+        private bool AddCross(WeaveMazeField field, int x, int y, bool nsHopsEw)
+        {
+            var graph = field.Graph!;
+            int nx = x, ny = y - 1, ex = x + 1, ey = y;
+            int sx = x, sy = y + 1, wx = x - 1, wy = y;
+
+            if (!IsCellWhite(field, nx, ny)) return false;
+            if (!IsCellWhite(field, ex, ey)) return false;
+            if (!IsCellWhite(field, sx, sy)) return false;
+            if (!IsCellWhite(field, wx, wy)) return false;
+
+            var backup = BackupAffectedVertices(graph, field, x, y, null);
+            WireCross(graph, field, x, y, nx, ny, ex, ey, sx, sy, wx, wy, nsHopsEw);
+
+            if (FindLoop(graph, field.VertexCount, field.LowerIndex(x, y)) ||
+                FindLoop(graph, field.VertexCount, field.UpperIndex(x, y)))
+            { RestoreAffectedVertices(graph, backup); return false; }
             return true;
         }
 
         /// <summary>
-        /// 添加东南方向环
+        /// 接线跨越结构。nsHopsEw=true 时南北走上层跨越东西；false 时东西走上层跨越南北。
         /// </summary>
-        private bool AddSouthEastLoop(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
+        private static void WireCross(List<List<WeaveAdjacency>> graph, WeaveMazeField field,
+            int cx, int cy, int nx, int ny, int ex, int ey, int sx, int sy, int wx, int wy,
+            bool nsHopsEw)
         {
-            var southCell = cells[cell.Y + 1][cell.X];
-            if (!southCell.White || southCell.IsNotFlat()) return false;
+            int lower = field.LowerIndex(cx, cy);
+            int upper = field.UpperIndex(cx, cy);
+            int northLower = field.LowerIndex(nx, ny);
+            int eastLower = field.LowerIndex(ex, ey);
+            int southLower = field.LowerIndex(sx, sy);
+            int westLower = field.LowerIndex(wx, wy);
 
-            var southEastCell = cells[cell.Y + 1][cell.X + 1];
-            if (!southEastCell.White || southEastCell.IsNotFlat()) return false;
-
-            var eastCell = cells[cell.Y][cell.X + 1];
-            if (!eastCell.White || eastCell.IsNotFlat()) return false;
-
-            var northCell = cells[cell.Y - 1][cell.X];
-            if (!northCell.White) return false;
-
-            var westCell = cells[cell.Y][cell.X - 1];
-            if (!westCell.White) return false;
-
-            cell.Backup();
-            northCell.Backup();
-            southEastCell.Backup();
-            eastCell.Backup();
-            southCell.Backup();
-            westCell.Backup();
-
-            WireCross(cell, northCell, eastCell, southCell, westCell, northSouthHopsEastWest);
-
-            if (southCell.Lower.East == null)
+            if (nsHopsEw)
             {
-                southCell.Lower.East = southEastCell.Lower;
-                southEastCell.Lower.West = southCell.Lower;
-            }
-            if (eastCell.Lower.South == null)
-            {
-                eastCell.Lower.South = southEastCell.Lower;
-                southEastCell.Lower.North = eastCell.Lower;
-            }
-
-            if (FindLoop(cells, cell.Lower) || FindLoop(cells, cell.Upper))
-            {
-                cell.Restore();
-                northCell.Restore();
-                southEastCell.Restore();
-                eastCell.Restore();
-                southCell.Restore();
-                westCell.Restore();
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// 添加西南方向环
-        /// </summary>
-        private bool AddSouthWestLoop(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
-        {
-            var southCell = cells[cell.Y + 1][cell.X];
-            if (!southCell.White || southCell.IsNotFlat()) return false;
-
-            var southWestCell = cells[cell.Y + 1][cell.X - 1];
-            if (!southWestCell.White || southWestCell.IsNotFlat()) return false;
-
-            var westCell = cells[cell.Y][cell.X - 1];
-            if (!westCell.White || westCell.IsNotFlat()) return false;
-
-            var northCell = cells[cell.Y - 1][cell.X];
-            if (!northCell.White) return false;
-
-            var eastCell = cells[cell.Y][cell.X + 1];
-            if (!eastCell.White) return false;
-
-            cell.Backup();
-            northCell.Backup();
-            southWestCell.Backup();
-            eastCell.Backup();
-            southCell.Backup();
-            westCell.Backup();
-
-            WireCross(cell, northCell, eastCell, southCell, westCell, northSouthHopsEastWest);
-
-            if (southCell.Lower.West == null)
-            {
-                southCell.Lower.West = southWestCell.Lower;
-                southWestCell.Lower.East = southCell.Lower;
-            }
-            if (westCell.Lower.South == null)
-            {
-                westCell.Lower.South = southWestCell.Lower;
-                southWestCell.Lower.North = westCell.Lower;
-            }
-
-            if (FindLoop(cells, cell.Lower) || FindLoop(cells, cell.Upper))
-            {
-                cell.Restore();
-                northCell.Restore();
-                southWestCell.Restore();
-                eastCell.Restore();
-                southCell.Restore();
-                westCell.Restore();
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// 添加西北方向环
-        /// </summary>
-        private bool AddNorthWestLoop(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
-        {
-            var northCell = cells[cell.Y - 1][cell.X];
-            if (!northCell.White || northCell.IsNotFlat()) return false;
-
-            var northWestCell = cells[cell.Y - 1][cell.X - 1];
-            if (!northWestCell.White || northWestCell.IsNotFlat()) return false;
-
-            var westCell = cells[cell.Y][cell.X - 1];
-            if (!westCell.White || westCell.IsNotFlat()) return false;
-
-            var southCell = cells[cell.Y + 1][cell.X];
-            if (!southCell.White) return false;
-
-            var eastCell = cells[cell.Y][cell.X + 1];
-            if (!eastCell.White) return false;
-
-            cell.Backup();
-            northCell.Backup();
-            northWestCell.Backup();
-            eastCell.Backup();
-            southCell.Backup();
-            westCell.Backup();
-
-            WireCross(cell, northCell, eastCell, southCell, westCell, northSouthHopsEastWest);
-
-            if (northCell.Lower.West == null)
-            {
-                northCell.Lower.West = northWestCell.Lower;
-                northWestCell.Lower.East = northCell.Lower;
-            }
-            if (westCell.Lower.North == null)
-            {
-                westCell.Lower.North = northWestCell.Lower;
-                northWestCell.Lower.South = westCell.Lower;
-            }
-
-            if (FindLoop(cells, cell.Lower) || FindLoop(cells, cell.Upper))
-            {
-                cell.Restore();
-                northCell.Restore();
-                northWestCell.Restore();
-                eastCell.Restore();
-                southCell.Restore();
-                westCell.Restore();
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// 添加十字交叉
-        /// </summary>
-        private bool AddCross(SquareCell[][] cells, SquareCell cell, bool northSouthHopsEastWest)
-        {
-            var northCell = cells[cell.Y - 1][cell.X];
-            if (!northCell.White) return false;
-
-            var eastCell = cells[cell.Y][cell.X + 1];
-            if (!eastCell.White) return false;
-
-            var southCell = cells[cell.Y + 1][cell.X];
-            if (!southCell.White) return false;
-
-            var westCell = cells[cell.Y][cell.X - 1];
-            if (!westCell.White) return false;
-
-            cell.Backup();
-            northCell.Backup();
-            eastCell.Backup();
-            southCell.Backup();
-            westCell.Backup();
-
-            WireCross(cell, northCell, eastCell, southCell, westCell, northSouthHopsEastWest);
-
-            if (FindLoop(cells, cell.Lower) || FindLoop(cells, cell.Upper))
-            {
-                cell.Restore();
-                northCell.Restore();
-                eastCell.Restore();
-                southCell.Restore();
-                westCell.Restore();
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// 在指定单元格处接线跨越结构。
-        /// 当 northSouthHopsEastWest 为 true 时，南北通道走上层（跨越东西通道）；
-        /// 为 false 时，东西通道走上层（跨越南北通道）。
-        /// </summary>
-        private static void WireCross(SquareCell cell, SquareCell northCell, SquareCell eastCell, SquareCell southCell, SquareCell westCell,
-            bool northSouthHopsEastWest)
-        {
-            if (northSouthHopsEastWest)
-            {
-                // 南北通道走上层，跨越东西通道
-
-                // 北向连接：转移到 upper
-                if (cell.Lower.North != null)
-                {
-                    cell.Lower.North.South = cell.Upper;
-                    cell.Upper.North = cell.Lower.North;
-                    cell.Lower.North = null;
-                }
+                // 南北走上层
+                if (HasDir(graph, lower, N))
+                { int nb = GetNeighbor(graph, lower, N); RemoveEdge(graph, lower, N, nb, S); AddEdge(graph, upper, N, nb, S); }
                 else
-                {
-                    northCell.Lower.South = cell.Upper;
-                    cell.Upper.North = northCell.Lower;
-                }
+                { AddEdge(graph, upper, N, northLower, S); }
 
-                // 南向连接：转移到 upper
-                if (cell.Lower.South != null)
-                {
-                    cell.Lower.South.North = cell.Upper;
-                    cell.Upper.South = cell.Lower.South;
-                    cell.Lower.South = null;
-                }
+                if (HasDir(graph, lower, S))
+                { int nb = GetNeighbor(graph, lower, S); RemoveEdge(graph, lower, S, nb, N); AddEdge(graph, upper, S, nb, N); }
                 else
-                {
-                    southCell.Lower.North = cell.Upper;
-                    cell.Upper.South = southCell.Lower;
-                }
+                { AddEdge(graph, upper, S, southLower, N); }
 
-                // 东向连接：保持在 lower
-                if (cell.Lower.East == null)
-                {
-                    cell.Lower.East = eastCell.Lower;
-                    eastCell.Lower.West = cell.Lower;
-                }
-
-                // 西向连接：保持在 lower
-                if (cell.Lower.West == null)
-                {
-                    cell.Lower.West = westCell.Lower;
-                    westCell.Lower.East = cell.Lower;
-                }
+                if (!HasDir(graph, lower, E)) AddEdge(graph, lower, E, eastLower, W);
+                if (!HasDir(graph, lower, W)) AddEdge(graph, lower, W, westLower, E);
             }
             else
             {
-                // 东西通道走上层，跨越南北通道
-
-                // 东向连接：转移到 upper
-                if (cell.Lower.East != null)
-                {
-                    cell.Lower.East.West = cell.Upper;
-                    cell.Upper.East = cell.Lower.East;
-                    cell.Lower.East = null;
-                }
+                // 东西走上层
+                if (HasDir(graph, lower, E))
+                { int nb = GetNeighbor(graph, lower, E); RemoveEdge(graph, lower, E, nb, W); AddEdge(graph, upper, E, nb, W); }
                 else
-                {
-                    eastCell.Lower.West = cell.Upper;
-                    cell.Upper.East = eastCell.Lower;
-                }
+                { AddEdge(graph, upper, E, eastLower, W); }
 
-                // 西向连接：转移到 upper
-                if (cell.Lower.West != null)
-                {
-                    cell.Lower.West.East = cell.Upper;
-                    cell.Upper.West = cell.Lower.West;
-                    cell.Lower.West = null;
-                }
+                if (HasDir(graph, lower, W))
+                { int nb = GetNeighbor(graph, lower, W); RemoveEdge(graph, lower, W, nb, E); AddEdge(graph, upper, W, nb, E); }
                 else
-                {
-                    westCell.Lower.East = cell.Upper;
-                    cell.Upper.West = westCell.Lower;
-                }
+                { AddEdge(graph, upper, W, westLower, E); }
 
-                // 北向连接：保持在 lower
-                if (cell.Lower.North == null)
-                {
-                    cell.Lower.North = northCell.Lower;
-                    northCell.Lower.South = cell.Lower;
-                }
-
-                // 南向连接：保持在 lower
-                if (cell.Lower.South == null)
-                {
-                    cell.Lower.South = southCell.Lower;
-                    southCell.Lower.North = cell.Lower;
-                }
+                if (!HasDir(graph, lower, N)) AddEdge(graph, lower, N, northLower, S);
+                if (!HasDir(graph, lower, S)) AddEdge(graph, lower, S, southLower, N);
             }
         }
 
-        /// <summary>
-        /// 从种子节点出发，检测图中是否存在图论环路（非树边）。
-        /// 使用 DFS，visitedBy 记录父节点。若遇到已访问且非父节点的邻居，则存在环路。
-        /// </summary>
-        private static bool FindLoop(SquareCell[][] cells, SquareNode seed)
+        #endregion
+
+        #region 环路检测
+
+        private static bool FindLoop(List<List<WeaveAdjacency>> graph, int vertexCount, int seed)
         {
-            int height = cells.Length;
-            int width = cells[0].Length;
+            var visitedBy = new int[vertexCount];
+            for (int i = 0; i < vertexCount; i++) visitedBy[i] = -1;
 
-            // 重置所有节点的 visitedBy
-            for (int i = height - 1; i >= 0; --i)
-            {
-                for (int j = width - 1; j >= 0; --j)
-                {
-                    cells[i][j].Lower.VisitedBy = null;
-                    cells[i][j].Upper.VisitedBy = null;
-                }
-            }
-
-            seed.VisitedBy = seed;
-            var stack = new List<SquareNode> { seed };
+            visitedBy[seed] = seed;
+            var stack = new List<int> { seed };
             int stackIndex = stack.Count - 1;
 
             while (stackIndex >= 0)
             {
-                var node = stack[stackIndex];
+                int v = stack[stackIndex];
                 stack.RemoveAt(stackIndex);
                 stackIndex--;
 
-                if (CheckNeighbor(node.North, node) ||
-                    CheckNeighbor(node.East, node) ||
-                    CheckNeighbor(node.South, node) ||
-                    CheckNeighbor(node.West, node))
+                foreach (var adj in graph[v])
                 {
-                    return true;
+                    int neighbor = adj.Neighbor;
+                    if (visitedBy[neighbor] >= 0)
+                    {
+                        if (neighbor != visitedBy[v]) return true;
+                    }
+                    else
+                    {
+                        visitedBy[neighbor] = v;
+                        stack.Add(neighbor);
+                        stackIndex++;
+                    }
                 }
             }
 
             return false;
-
-            bool CheckNeighbor(SquareNode? neighbor, SquareNode parent)
-            {
-                if (neighbor == null) return false;
-                if (neighbor.VisitedBy != null)
-                {
-                    // 邻居已被访问，如果邻居不是当前节点的父节点，则存在环路
-                    return neighbor != parent.VisitedBy;
-                }
-                neighbor.VisitedBy = parent;
-                stack.Add(neighbor);
-                stackIndex++;
-                return false;
-            }
         }
 
         #endregion
 
         #region 区域标记
 
-        /// <summary>
-        /// 为所有节点分配区域标识。通过 DFS 洪水填充，沿节点的四方向连接遍历，
-        /// 连通的节点分配相同的区域 ID。返回按区域 ID 索引的节点列表。
-        /// </summary>
-        private static List<SquareNode[]> AssignRegions(SquareCell[][] cells, int height, int width)
+        private static (int[] region, List<int[]> regionNodes) AssignRegions(WeaveMazeField field)
         {
-            var regionNodes = new List<SquareNode[]>();
+            var graph = field.Graph!;
+            int vertexCount = field.VertexCount;
+
+            var region = new int[vertexCount];
+            for (int i = 0; i < vertexCount; i++) region[i] = -1;
+
+            var regionNodes = new List<int[]>();
             int regionId = 0;
 
-            for (int i = height - 1; i >= 0; --i)
+            for (int v = vertexCount - 1; v >= 0; --v)
             {
-                for (int j = width - 1; j >= 0; --j)
+                if (region[v] >= 0) continue;
+
+                var nodes = new List<int>();
+                region[v] = regionId;
+                nodes.Add(v);
+
+                var stack = new List<int> { v };
+                while (stack.Count > 0)
                 {
-                    var cell = cells[i][j];
-                    if (cell.Lower.Region < 0)
+                    int last = stack.Count - 1;
+                    int current = stack[last];
+                    stack.RemoveAt(last);
+
+                    foreach (var adj in graph[current])
                     {
-                        if (regionId < regionNodes.Count)
-                            regionNodes[regionId] = AssignRegion(regionId, cell.Lower);
-                        else
-                            regionNodes.Add(AssignRegion(regionId, cell.Lower));
-                        regionId++;
-                    }
-                    if (cell.Upper.Region < 0)
-                    {
-                        if (regionId < regionNodes.Count)
-                            regionNodes[regionId] = AssignRegion(regionId, cell.Upper);
-                        else
-                            regionNodes.Add(AssignRegion(regionId, cell.Upper));
-                        regionId++;
+                        int neighbor = adj.Neighbor;
+                        if (region[neighbor] < 0)
+                        {
+                            region[neighbor] = regionId;
+                            stack.Add(neighbor);
+                            nodes.Add(neighbor);
+                        }
                     }
                 }
+
+                regionNodes.Add(nodes.ToArray());
+                regionId++;
             }
 
-            return regionNodes;
-        }
-
-        /// <summary>
-        /// 从种子节点出发，DFS 填充同一区域的所有节点
-        /// </summary>
-        private static SquareNode[] AssignRegion(int region, SquareNode seed)
-        {
-            var nodes = new List<SquareNode>();
-            seed.Region = region;
-            nodes.Add(seed);
-
-            var stack = new List<SquareNode> { seed };
-            while (stack.Count > 0)
-            {
-                int last = stack.Count - 1;
-                var node = stack[last];
-                stack.RemoveAt(last);
-
-                TryEnqueue(node.North);
-                TryEnqueue(node.East);
-                TryEnqueue(node.South);
-                TryEnqueue(node.West);
-            }
-
-            return nodes.ToArray();
-
-            void TryEnqueue(SquareNode? neighbor)
-            {
-                if (neighbor != null && neighbor.Region < 0)
-                {
-                    neighbor.Region = region;
-                    stack.Add(neighbor);
-                    nodes.Add(neighbor);
-                }
-            }
+            return (region, regionNodes);
         }
 
         #endregion
 
         #region 生成树
 
-        /// <summary>
-        /// 使用随机化 Kruskal 算法变体生成生成树，将所有区域连通。
-        /// longCorridors 为 true 时使用 Hunt-and-Kill 变体，生成更长的通道。
-        /// </summary>
-        private void CreateSpanningTree(SquareCell[][] cells, int height, int width, List<SquareNode[]> regions, bool longCorridors)
+        private void CreateSpanningTree(WeaveMazeField field, int[] region, List<int[]> regionNodes)
         {
-            int maxX = width - 1;
-            int maxY = height - 1;
+            var graph = field.Graph!;
+            int maxX = field.Width - 1;
+            int maxY = field.Height - 1;
+            bool longCorridors = field.LongPassages;
 
-            // 收集可扩展节点：upper 节点没有 north 和 east 连接的 lower 节点
-            var nodes = new List<SquareNode>();
-            for (int i = maxY; i >= 0; --i)
+            // 收集候选顶点：白色单元格中 Upper 无北向和东向连接的 Lower 顶点
+            var nodes = new List<int>();
+            for (int y = maxY; y >= 0; --y)
             {
-                for (int j = maxX; j >= 0; --j)
+                for (int x = maxX; x >= 0; --x)
                 {
-                    var cell = cells[i][j];
-                    if (cell.White && cell.Upper.North == null && cell.Upper.East == null)
-                    {
-                        nodes.Add(cell.Lower);
-                    }
+                    if (!IsCellWhite(field, x, y)) continue;
+                    int upper = field.UpperIndex(x, y);
+                    if (!HasDir(graph, upper, N) && !HasDir(graph, upper, E))
+                        nodes.Add(field.LowerIndex(x, y));
                 }
             }
 
-            if (longCorridors)
+            // 随机打乱
+            Shuffle(nodes);
+
+            int nodeIndex = 0;
+            while (nodeIndex < nodes.Count)
             {
-                nodes.Shuffle(random);
-            }
+                int node = nodes[nodeIndex];
+                int cellX = field.VertexCellX![node];
+                int cellY = field.VertexCellY![node];
+                int nodeRegion = region[node];
 
-            while (nodes.Count > 0)
-            {
-                int index = longCorridors ? nodes.Count - 1 : (int)(nodes.Count * random.NextDouble());
-                var node = nodes[index];
-
-                if (longCorridors)
-                {
-                    MoveToEnd(nodes, node);
-                }
-
-                var cell = node.Cell;
                 var permutation = Permutations[random.Next(Permutations.Length)];
                 bool connected = false;
 
@@ -680,58 +452,58 @@ namespace SimplexLab.WeaveMaze
                 {
                     switch (permutation[i])
                     {
-                        case 0: // 北
-                            if (cell.Y > 0 && node.North == null)
+                        case N: // 北
+                            if (cellY > 0 && !HasDir(graph, node, N))
                             {
-                                var northCell = cells[cell.Y - 1][cell.X];
-                                if (northCell.White && northCell.Lower.Region != node.Region)
+                                int northLower = field.LowerIndex(cellX, cellY - 1);
+                                if (IsCellWhite(field, cellX, cellY - 1) && region[northLower] != nodeRegion)
                                 {
-                                    northCell.Lower.South = node;
-                                    node.North = northCell.Lower;
-                                    if (longCorridors) MoveToEnd(nodes, node.North);
-                                    MergeRegions(northCell.Lower.Region, node.Region, regions);
+                                    AddEdge(graph, node, N, northLower, S);
+                                    MergeRegions(region[northLower], nodeRegion, region, regionNodes);
+                                    nodeRegion = region[node];
+                                    if (longCorridors) MoveToEnd(nodes, northLower);
                                     connected = true;
                                 }
                             }
                             break;
-                        case 1: // 东
-                            if (cell.X < maxX && node.East == null)
+                        case E: // 东
+                            if (cellX < maxX && !HasDir(graph, node, E))
                             {
-                                var eastCell = cells[cell.Y][cell.X + 1];
-                                if (eastCell.White && eastCell.Lower.Region != node.Region)
+                                int eastLower = field.LowerIndex(cellX + 1, cellY);
+                                if (IsCellWhite(field, cellX + 1, cellY) && region[eastLower] != nodeRegion)
                                 {
-                                    eastCell.Lower.West = node;
-                                    node.East = eastCell.Lower;
-                                    if (longCorridors) MoveToEnd(nodes, node.East);
-                                    MergeRegions(eastCell.Lower.Region, node.Region, regions);
+                                    AddEdge(graph, node, E, eastLower, W);
+                                    MergeRegions(region[eastLower], nodeRegion, region, regionNodes);
+                                    nodeRegion = region[node];
+                                    if (longCorridors) MoveToEnd(nodes, eastLower);
                                     connected = true;
                                 }
                             }
                             break;
-                        case 2: // 南
-                            if (cell.Y < maxY && node.South == null)
+                        case S: // 南
+                            if (cellY < maxY && !HasDir(graph, node, S))
                             {
-                                var southCell = cells[cell.Y + 1][cell.X];
-                                if (southCell.White && southCell.Lower.Region != node.Region)
+                                int southLower = field.LowerIndex(cellX, cellY + 1);
+                                if (IsCellWhite(field, cellX, cellY + 1) && region[southLower] != nodeRegion)
                                 {
-                                    southCell.Lower.North = node;
-                                    node.South = southCell.Lower;
-                                    if (longCorridors) MoveToEnd(nodes, node.South);
-                                    MergeRegions(southCell.Lower.Region, node.Region, regions);
+                                    AddEdge(graph, node, S, southLower, N);
+                                    MergeRegions(region[southLower], nodeRegion, region, regionNodes);
+                                    nodeRegion = region[node];
+                                    if (longCorridors) MoveToEnd(nodes, southLower);
                                     connected = true;
                                 }
                             }
                             break;
                         default: // 西
-                            if (cell.X > 0 && node.West == null)
+                            if (cellX > 0 && !HasDir(graph, node, W))
                             {
-                                var westCell = cells[cell.Y][cell.X - 1];
-                                if (westCell.White && westCell.Lower.Region != node.Region)
+                                int westLower = field.LowerIndex(cellX - 1, cellY);
+                                if (IsCellWhite(field, cellX - 1, cellY) && region[westLower] != nodeRegion)
                                 {
-                                    westCell.Lower.East = node;
-                                    node.West = westCell.Lower;
-                                    if (longCorridors) MoveToEnd(nodes, node.West);
-                                    MergeRegions(westCell.Lower.Region, node.Region, regions);
+                                    AddEdge(graph, node, W, westLower, E);
+                                    MergeRegions(region[westLower], nodeRegion, region, regionNodes);
+                                    nodeRegion = region[node];
+                                    if (longCorridors) MoveToEnd(nodes, westLower);
                                     connected = true;
                                 }
                             }
@@ -741,58 +513,171 @@ namespace SimplexLab.WeaveMaze
                     if (connected) break;
                 }
 
-                if (longCorridors)
-                {
-                    if (!connected)
-                    {
-                        nodes.RemoveAt(nodes.Count - 1);
-                    }
-                }
-                else
-                {
-                    if (!connected)
-                    {
-                        nodes.RemoveAt(index);
-                    }
-                }
+                nodeIndex++;
             }
         }
 
-        /// <summary>
-        /// 合并两个区域：将 region1 的所有节点归入 region2
-        /// </summary>
-        private static void MergeRegions(int region1, int region2, List<SquareNode[]> regions)
+        private static void MergeRegions(int region1, int region2, int[] region, List<int[]> regionNodes)
         {
-            var region1Nodes = regions[region1];
-            var region2Nodes = regions[region2];
-            for (int i = region1Nodes.Length - 1; i >= 0; --i)
+            if (region1 == region2) return;
+
+            var r1Nodes = regionNodes[region1];
+            var r2Nodes = regionNodes[region2];
+
+            for (int i = r1Nodes.Length - 1; i >= 0; --i)
+                region[r1Nodes[i]] = region2;
+
+            var merged = new int[r2Nodes.Length + r1Nodes.Length];
+            Array.Copy(r2Nodes, merged, r2Nodes.Length);
+            Array.Copy(r1Nodes, 0, merged, r2Nodes.Length, r1Nodes.Length);
+            regionNodes[region2] = merged;
+            regionNodes[region1] = Array.Empty<int>();
+        }
+
+        private static void MoveToEnd(List<int> nodes, int vertex)
+        {
+            int idx = nodes.IndexOf(vertex);
+            if (idx >= 0)
             {
-                region1Nodes[i].Region = region2;
+                nodes.RemoveAt(idx);
+                nodes.Add(vertex);
             }
-            // 将 region1 的节点追加到 region2，并清空 region1
-            var merged = new SquareNode[region2Nodes.Length + region1Nodes.Length];
-            region2Nodes.CopyTo(merged, 0);
-            region1Nodes.CopyTo(merged, region2Nodes.Length);
-            regions[region2] = merged;
-            regions[region1] = Array.Empty<SquareNode>();
         }
 
-        /// <summary>将节点移到列表末尾（用于长通道模式）</summary>
-        private static void MoveToEnd(List<SquareNode> nodes, SquareNode node)
+        private void Shuffle(List<int> list)
         {
-            int index = nodes.IndexOf(node);
-            if (index < 0 || index == nodes.Count - 1) return;
-            nodes.RemoveAt(index);
-            nodes.Add(node);
+            for (int i = list.Count - 1; i > 0; --i)
+            {
+                int j = (int)((i + 1) * random.NextDouble());
+                if (j > i) j = i;
+                (list[i], list[j]) = (list[j], list[i]);
+            }
+        }
+
+        #endregion
+
+        #region 收尾
+
+        private static void FinalizeField(WeaveMazeField field)
+        {
+            var graph = field.Graph!;
+            int cellCount = field.Width * field.Height;
+
+            for (int i = 0; i < cellCount; i++)
+            {
+                int upper = i * 2 + 1;
+                field.CellOverNS![i] = HasDir(graph, upper, N);
+                field.CellOverEW![i] = HasDir(graph, upper, E);
+            }
+        }
+
+        #endregion
+
+        #region 图操作辅助方法
+
+        private static bool HasDir(List<List<WeaveAdjacency>> graph, int vertex, int direction)
+        {
+            foreach (var adj in graph[vertex])
+                if (adj.Direction == direction) return true;
+            return false;
+        }
+
+        private static int GetNeighbor(List<List<WeaveAdjacency>> graph, int vertex, int direction)
+        {
+            foreach (var adj in graph[vertex])
+                if (adj.Direction == direction) return adj.Neighbor;
+            return -1;
+        }
+
+        private static void AddEdge(List<List<WeaveAdjacency>> graph, int v1, int dir1, int v2, int dir2)
+        {
+            foreach (var adj in graph[v1])
+                if (adj.Direction == dir1 && adj.Neighbor == v2) return;
+            graph[v1].Add(new WeaveAdjacency(v2, dir1));
+            graph[v2].Add(new WeaveAdjacency(v1, dir2));
+        }
+
+        private static void RemoveEdge(List<List<WeaveAdjacency>> graph, int v1, int dir1, int v2, int dir2)
+        {
+            graph[v1].RemoveAll(adj => adj.Direction == dir1 && adj.Neighbor == v2);
+            graph[v2].RemoveAll(adj => adj.Direction == dir2 && adj.Neighbor == v1);
+        }
+
+        private static bool IsCellNotFlat(List<List<WeaveAdjacency>> graph, WeaveMazeField field, int x, int y)
+        {
+            int upper = field.UpperIndex(x, y);
+            return graph[upper].Count > 0;
+        }
+
+        private bool IsCellWhite(WeaveMazeField field, int x, int y)
+        {
+            if (x < 0 || x >= field.Width || y < 0 || y >= field.Height) return false;
+            return field.CellWhite![field.CellIndex(x, y)];
+        }
+
+        #endregion
+
+        #region 备份/恢复
+
+        private static Dictionary<int, List<WeaveAdjacency>> BackupAffectedVertices(
+            List<List<WeaveAdjacency>> graph, WeaveMazeField field, int cx, int cy,
+            (int x, int y)[]? extraCells)
+        {
+            var affected = new HashSet<int>();
+
+            // 中心单元格
+            affected.Add(field.LowerIndex(cx, cy));
+            affected.Add(field.UpperIndex(cx, cy));
+
+            // 四方向相邻单元格
+            for (int d = 0; d < 4; d++)
+            {
+                int ax = cx + Dx[d], ay = cy + Dy[d];
+                if (ax >= 0 && ax < field.Width && ay >= 0 && ay < field.Height)
+                {
+                    affected.Add(field.LowerIndex(ax, ay));
+                    affected.Add(field.UpperIndex(ax, ay));
+                }
+            }
+
+            // 额外单元格（对角线）
+            if (extraCells != null)
+            {
+                foreach (var (ex, ey) in extraCells)
+                {
+                    if (ex >= 0 && ex < field.Width && ey >= 0 && ey < field.Height)
+                    {
+                        affected.Add(field.LowerIndex(ex, ey));
+                        affected.Add(field.UpperIndex(ex, ey));
+                    }
+                }
+            }
+
+            // 中心单元格当前邻居（它们的边可能被重定向）
+            int lower = field.LowerIndex(cx, cy);
+            int upper = field.UpperIndex(cx, cy);
+            foreach (var adj in graph[lower]) affected.Add(adj.Neighbor);
+            foreach (var adj in graph[upper]) affected.Add(adj.Neighbor);
+
+            var backup = new Dictionary<int, List<WeaveAdjacency>>();
+            foreach (var v in affected)
+                backup[v] = new List<WeaveAdjacency>(graph[v]);
+
+            return backup;
+        }
+
+        private static void RestoreAffectedVertices(
+            List<List<WeaveAdjacency>> graph,
+            Dictionary<int, List<WeaveAdjacency>> backup)
+        {
+            foreach (var kvp in backup)
+                graph[kvp.Key] = kvp.Value;
         }
 
         #endregion
 
         #region 工具方法
 
-        /// <summary>
-        /// 生成 0-3 的所有 24 种排列
-        /// </summary>
         private static int[][] GeneratePermutations()
         {
             var result = new List<int[]>();
@@ -801,12 +686,6 @@ namespace SimplexLab.WeaveMaze
             return result.ToArray();
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="arr"></param>
-        /// <param name="start"></param>
-        /// <param name="result"></param>
         private static void Permute(int[] arr, int start, List<int[]> result)
         {
             if (start == arr.Length)

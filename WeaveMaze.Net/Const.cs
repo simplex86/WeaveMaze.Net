@@ -1,4 +1,4 @@
-﻿namespace SimplexLab.WeaveMaze
+namespace SimplexLab.WeaveMaze
 {
     /// <summary>
     /// 
@@ -13,5 +13,9 @@
         /// 自定义
         /// </summary>
         Customized,
+        /// <summary>
+        /// 圆形
+        /// </summary>
+        Circular,
     }
 }

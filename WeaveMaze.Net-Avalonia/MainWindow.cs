@@ -34,6 +34,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         private ComboBox shape;
         private RectangularMazeControl rectangularMazeControl;
         private CustomizedMazeControl customizedMazeControl;
+        private CircularMazeControl circularMazeControl;
         private Button generation;
         private CheckBox showRoundedCorners;
         private CheckBox showSolution;
@@ -81,7 +82,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         {
             shape = new ComboBox
             {
-                ItemsSource = new[] { "Rectangular", "Customized" },
+                ItemsSource = new[] { "Rectangular", "Customized", "Circular" },
                 SelectedIndex = 0,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
@@ -93,6 +94,11 @@ namespace SimplexLab.WeaveMaze.TApplication
             };
 
             customizedMazeControl = new CustomizedMazeControl
+            {
+                IsVisible = false,
+            };
+
+            circularMazeControl = new CircularMazeControl
             {
                 IsVisible = false,
             };
@@ -166,6 +172,7 @@ namespace SimplexLab.WeaveMaze.TApplication
                     },
                     rectangularMazeControl,
                     customizedMazeControl,
+                    circularMazeControl,
                 }
             };
 
@@ -535,6 +542,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         {
             rectangularMazeControl.IsVisible = shape.SelectedIndex == 0;
             customizedMazeControl.IsVisible = shape.SelectedIndex == 1;
+            circularMazeControl.IsVisible = shape.SelectedIndex == 2;
         }
 
         private async void OnGeneratoinClickedHandler(object? sender, RoutedEventArgs e)
@@ -557,6 +565,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             shape.IsEnabled = false;
             rectangularMazeControl.IsEnabled = false;
             customizedMazeControl.IsEnabled = false;
+            circularMazeControl.IsEnabled = false;
             generation.IsEnabled = false;
             showRoundedCorners.IsEnabled = false;
             showSolution.IsEnabled = false;
@@ -571,6 +580,9 @@ namespace SimplexLab.WeaveMaze.TApplication
                     break;
                 case EWeaveMazeShape.Customized:
                     await GenerateCustomizedWeaveMaze();
+                    break;
+                case EWeaveMazeShape.Circular:
+                    await GenerateCircularWeaveMaze();
                     break;
             }
 
@@ -595,6 +607,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             shape.IsEnabled = true;
             rectangularMazeControl.IsEnabled = true;
             customizedMazeControl.IsEnabled = true;
+            circularMazeControl.IsEnabled = true;
             generation.IsEnabled = true;
             showRoundedCorners.IsEnabled = true;
             showSolution.IsEnabled = true;
@@ -751,6 +764,21 @@ namespace SimplexLab.WeaveMaze.TApplication
             var mask = CustomizedWeaveMazeMaskLoader.Load(filename);
             var field = new CustomizedWeaveMazeField(mask, loopFrac, crossFrac, longPassages);
 
+            mazeField = await mazeGenerator.GenerateAsync(field);
+        }
+
+        private async Task GenerateCircularWeaveMaze()
+        {
+            var r = circularMazeControl.MazeRings;
+            var s = circularMazeControl.MazeSectors;
+            var loopFrac = circularMazeControl.LoopFraction;
+            var crossFrac = circularMazeControl.CrossFraction;
+            var longPassages = circularMazeControl.LongPassages;
+
+            if (r <= 0) r = CircularWeaveMazeField.DefaultRings;
+            if (s <= 0) s = CircularWeaveMazeField.DefaultSectors;
+
+            var field = new CircularWeaveMazeField(r, s, loopFrac, crossFrac, longPassages);
             mazeField = await mazeGenerator.GenerateAsync(field);
         }
 

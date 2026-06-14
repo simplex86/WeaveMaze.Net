@@ -43,6 +43,22 @@ namespace SimplexLab.WeaveMaze
             var graph = field.Graph;
             if (graph == null) return;
 
+            BuildSolutionDirs(graph, field.Height, field.Width);
+
+            if (field is CircularWeaveMazeField)
+            {
+                DrawCircularSolution(context, graph);
+            }
+            else
+            {
+                DrawRectangularSolution(context, graph);
+            }
+        }
+
+        #region 矩形解路径渲染
+
+        private void DrawRectangularSolution(IGraphicsContext context, List<List<WeaveAdjacency>> graph)
+        {
             var mazeHeight = field.Height;
             var mazeWidth = field.Width;
 
@@ -57,19 +73,323 @@ namespace SimplexLab.WeaveMaze
             var r0 = (d1 - d0) / 2;
             var lineW = lineWidthFrac * cellSize;
 
-            // 平移变换
             context.PushTranslate(offsetX, offsetY);
 
-            BuildSolutionDirs(graph, mazeHeight, mazeWidth);
-
-            // 构建并描边解路径
             context.BeginPath();
-            DrawSolutionPaths(context, graph, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
+            DrawRectSolutionPaths(context, graph, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
             context.EndPath();
             context.StrokePath(solutionColor, lineW, true);
 
             context.PopTransform();
         }
+
+        private void DrawRectSolutionPaths(IGraphicsContext context,
+                                       List<List<WeaveAdjacency>> graph,
+                                       int mazeHeight,
+                                       int mazeWidth,
+                                       float cellSize,
+                                       float d0,
+                                       float d1,
+                                       float dm,
+                                       float r0)
+        {
+            var cellWhite = field.CellWhite!;
+            var cellOverNS = field.CellOverNS!;
+            var cellOverEW = field.CellOverEW!;
+
+            for (int i = 0; i < mazeHeight; i++)
+            {
+                var oy = i * cellSize;
+                for (int j = 0; j < mazeWidth; j++)
+                {
+                    var ox = j * cellSize;
+                    int cellIndex = field.CellIndex(j, i);
+
+                    if (!cellWhite[cellIndex]) continue;
+
+                    var lowerDir = lowerSolDirs.TryGetValue(cellIndex, out var ld) ? ld : 0;
+                    var upperDir = upperSolDirs.TryGetValue(cellIndex, out var ud) ? ud : 0;
+
+                    if (cellOverNS[cellIndex])
+                    {
+                        if ((upperDir & 0b1010) != 0)
+                        {
+                            pathBuilder.MoveTo(context, ox + dm, oy);
+                            pathBuilder.LineTo(context, ox + dm, oy + cellSize);
+                        }
+                        if ((lowerDir & 0b0101) != 0)
+                        {
+                            pathBuilder.MoveTo(context, ox, oy + dm);
+                            pathBuilder.LineTo(context, ox + d0, oy + dm);
+                            pathBuilder.MoveTo(context, ox + d1, oy + dm);
+                            pathBuilder.LineTo(context, ox + cellSize, oy + dm);
+                        }
+                    }
+                    else if (cellOverEW[cellIndex])
+                    {
+                        if ((upperDir & 0b0101) != 0)
+                        {
+                            pathBuilder.MoveTo(context, ox, oy + dm);
+                            pathBuilder.LineTo(context, ox + cellSize, oy + dm);
+                        }
+                        if ((lowerDir & 0b1010) != 0)
+                        {
+                            pathBuilder.MoveTo(context, ox + dm, oy);
+                            pathBuilder.LineTo(context, ox + dm, oy + d0);
+                            pathBuilder.MoveTo(context, ox + dm, oy + d1);
+                            pathBuilder.LineTo(context, ox + dm, oy + cellSize);
+                        }
+                    }
+                    else if (lowerDir != 0)
+                    {
+                        DrawRectSolutionFlat(context, ox, oy, cellSize, dm, lowerDir);
+                    }
+                }
+            }
+        }
+
+        private void DrawRectSolutionFlat(IGraphicsContext context, float ox, float oy, float cellSize, float dm, int value)
+        {
+            switch (value)
+            {
+                case 0b1000:
+                    pathBuilder.MoveTo(context, ox + dm, oy);
+                    pathBuilder.LineTo(context, ox + dm, oy + dm);
+                    break;
+                case 0b0100:
+                    pathBuilder.MoveTo(context, ox + cellSize, oy + dm);
+                    pathBuilder.LineTo(context, ox + dm, oy + dm);
+                    break;
+                case 0b0010:
+                    pathBuilder.MoveTo(context, ox + dm, oy + cellSize);
+                    pathBuilder.LineTo(context, ox + dm, oy + dm);
+                    break;
+                case 0b0001:
+                    pathBuilder.MoveTo(context, ox, oy + dm);
+                    pathBuilder.LineTo(context, ox + dm, oy + dm);
+                    break;
+
+                case 0b1100:
+                    pathBuilder.MoveTo(context, ox + dm, oy);
+                    pathBuilder.ArcTo(context, ox + dm, oy + dm, ox + cellSize, oy + dm, dm);
+                    break;
+                case 0b0110:
+                    pathBuilder.MoveTo(context, ox + cellSize, oy + dm);
+                    pathBuilder.ArcTo(context, ox + dm, oy + dm, ox + dm, oy + cellSize, dm);
+                    break;
+                case 0b0011:
+                    pathBuilder.MoveTo(context, ox + dm, oy + cellSize);
+                    pathBuilder.ArcTo(context, ox + dm, oy + dm, ox, oy + dm, dm);
+                    break;
+                case 0b1001:
+                    pathBuilder.MoveTo(context, ox, oy + dm);
+                    pathBuilder.ArcTo(context, ox + dm, oy + dm, ox + dm, oy, dm);
+                    break;
+
+                case 0b1010:
+                    pathBuilder.MoveTo(context, ox + dm, oy);
+                    pathBuilder.LineTo(context, ox + dm, oy + cellSize);
+                    break;
+                case 0b0101:
+                    pathBuilder.MoveTo(context, ox, oy + dm);
+                    pathBuilder.LineTo(context, ox + cellSize, oy + dm);
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region 圆形解路径渲染
+
+        /// <summary>
+        /// 圆形迷宫解路径渲染。
+        /// 几何映射：矩形水平线→弧线，矩形垂直线→径向线。
+        /// 方向：0=In, 1=CW, 2=Out, 3=CCW
+        /// </summary>
+        private void DrawCircularSolution(IGraphicsContext context, List<List<WeaveAdjacency>> graph)
+        {
+            int rings = field.Height;
+            int sectors = field.Width;
+
+            float cx = width / 2f;
+            float cy = height / 2f;
+            float maxRadius = Math.Min(width, height) / 2f * 0.95f;
+
+            float sectorAngle = 360f / sectors;
+            float ringWidth = maxRadius / rings;
+
+            float cellMarginFrac = (1 - passageWidthFrac) / 2;
+            float d0 = cellMarginFrac * ringWidth;
+            float d1 = (1 - cellMarginFrac) * ringWidth;
+            float angD0 = cellMarginFrac * sectorAngle;
+            float angD1 = (1 - cellMarginFrac) * sectorAngle;
+
+            var lineW = lineWidthFrac * ringWidth;
+
+            var cellWhite = field.CellWhite!;
+            var cellOverNS = field.CellOverNS!;
+            var cellOverEW = field.CellOverEW!;
+
+            context.BeginPath();
+
+            for (int ring = 0; ring < rings; ring++)
+            {
+                for (int sector = 0; sector < sectors; sector++)
+                {
+                    int ci = field.CellIndex(sector, ring);
+                    if (!cellWhite[ci]) continue;
+
+                    float innerR = ring * ringWidth;
+                    float outerR = (ring + 1) * ringWidth;
+                    float startAngle = sector * sectorAngle;
+                    float endAngle = (sector + 1) * sectorAngle;
+
+                    float passInnerR = innerR + d0;
+                    float passOuterR = innerR + d1;
+                    float passStartAngle = startAngle + angD0;
+                    float passEndAngle = startAngle + angD1;
+                    float centerR = innerR + ringWidth / 2;
+                    float centerAngle = startAngle + sectorAngle / 2;
+
+                    var lowerDir = lowerSolDirs.TryGetValue(ci, out var ld) ? ld : 0;
+                    var upperDir = upperSolDirs.TryGetValue(ci, out var ud) ? ud : 0;
+
+                    if (cellOverNS[ci])
+                    {
+                        // In/Out 跨越：upper 走 In/Out（径向），lower 走 CW/CCW（弧向）
+                        if ((upperDir & 0b1010) != 0)
+                            DrawSolRadial(context, cx, cy, centerAngle, innerR, outerR);
+                        if ((lowerDir & 0b0101) != 0)
+                        {
+                            DrawSolArc(context, cx, cy, centerR, startAngle, passStartAngle);
+                            DrawSolArc(context, cx, cy, centerR, passEndAngle, endAngle);
+                        }
+                    }
+                    else if (cellOverEW[ci])
+                    {
+                        // CW/CCW 跨越：upper 走 CW/CCW（弧向），lower 走 In/Out（径向）
+                        if ((upperDir & 0b0101) != 0)
+                            DrawSolArc(context, cx, cy, centerR, startAngle, endAngle);
+                        if ((lowerDir & 0b1010) != 0)
+                        {
+                            DrawSolRadial(context, cx, cy, centerAngle, innerR, passInnerR);
+                            DrawSolRadial(context, cx, cy, centerAngle, passOuterR, outerR);
+                        }
+                    }
+                    else if (lowerDir != 0)
+                    {
+                        DrawCircularSolutionFlat(context, cx, cy,
+                            innerR, outerR, startAngle, endAngle,
+                            centerR, centerAngle, lowerDir);
+                    }
+                }
+            }
+
+            context.EndPath();
+            context.StrokePath(solutionColor, lineW, true);
+        }
+
+        /// <summary>
+        /// 平坦单元格解路径绘制。
+        /// 路径延伸到单元格边界（innerR/outerR/startAngle/endAngle），确保相邻单元格的路径连接。
+        /// In/Out 方向画径向线，CW/CCW 方向画弧线，都在单元格中心交汇。
+        /// 转弯（两个相邻方向）画为连续路径。
+        /// </summary>
+        private void DrawCircularSolutionFlat(IGraphicsContext context, float cx, float cy,
+            float innerR, float outerR, float startAngle, float endAngle,
+            float centerR, float centerAngle, int value)
+        {
+            bool hasIn  = (value & 0b1000) != 0;
+            bool hasCW  = (value & 0b0100) != 0;
+            bool hasOut = (value & 0b0010) != 0;
+            bool hasCCW = (value & 0b0001) != 0;
+
+            // 计算单元格边界点和中心点的笛卡尔坐标
+            float ToX(float angle, float r) => cx + r * (float)Math.Cos(angle * Math.PI / 180);
+            float ToY(float angle, float r) => cy + r * (float)Math.Sin(angle * Math.PI / 180);
+
+            float inX = ToX(centerAngle, innerR), inY = ToY(centerAngle, innerR);
+            float outX = ToX(centerAngle, outerR), outY = ToY(centerAngle, outerR);
+            float cwX = ToX(endAngle, centerR), cwY = ToY(endAngle, centerR);
+            float ccwX = ToX(startAngle, centerR), ccwY = ToY(startAngle, centerR);
+            float midX = ToX(centerAngle, centerR), midY = ToY(centerAngle, centerR);
+
+            int dirCount = (hasIn ? 1 : 0) + (hasCW ? 1 : 0) + (hasOut ? 1 : 0) + (hasCCW ? 1 : 0);
+
+            switch (dirCount)
+            {
+                case 1:
+                    // 死胡同：从边界到中心
+                    if (hasIn) { context.MoveTo(inX, inY); context.LineTo(midX, midY); }
+                    else if (hasCW) { context.MoveTo(cwX, cwY); context.LineTo(midX, midY); }
+                    else if (hasOut) { context.MoveTo(outX, outY); context.LineTo(midX, midY); }
+                    else { context.MoveTo(ccwX, ccwY); context.LineTo(midX, midY); }
+                    break;
+
+                case 2:
+                    // 直通或转弯
+                    if (hasIn && hasOut)
+                    {
+                        // In-Out 直通：径向线
+                        context.MoveTo(inX, inY); context.LineTo(outX, outY);
+                    }
+                    else if (hasCW && hasCCW)
+                    {
+                        // CW-CCW 直通：弧线
+                        DrawSolArc(context, cx, cy, centerR, startAngle, endAngle);
+                    }
+                    else
+                    {
+                        // 转弯：连续路径，经过中心点
+                        // 先确定两个方向的边界点
+                        (float x, float y) p1, p2;
+                        if (hasIn) { p1 = (inX, inY); }
+                        else if (hasCW) { p1 = (cwX, cwY); }
+                        else if (hasOut) { p1 = (outX, outY); }
+                        else { p1 = (ccwX, ccwY); }
+
+                        if (hasCCW) { p2 = (ccwX, ccwY); }
+                        else if (hasOut) { p2 = (outX, outY); }
+                        else if (hasCW) { p2 = (cwX, cwY); }
+                        else { p2 = (inX, inY); }
+
+                        context.MoveTo(p1.x, p1.y);
+                        context.LineTo(midX, midY);
+                        context.LineTo(p2.x, p2.y);
+                    }
+                    break;
+
+                default:
+                    // 3+ 方向：每个方向画一条从边界到中心的线
+                    if (hasIn) { context.MoveTo(inX, inY); context.LineTo(midX, midY); }
+                    if (hasCW) { context.MoveTo(cwX, cwY); context.LineTo(midX, midY); }
+                    if (hasOut) { context.MoveTo(outX, outY); context.LineTo(midX, midY); }
+                    if (hasCCW) { context.MoveTo(ccwX, ccwY); context.LineTo(midX, midY); }
+                    break;
+            }
+        }
+
+        /// <summary>绘制解路径弧线段</summary>
+        private static void DrawSolArc(IGraphicsContext context, float cx, float cy,
+            float radius, float startAngleDeg, float endAngleDeg)
+        {
+            context.MoveTo(cx + radius * (float)Math.Cos(startAngleDeg * Math.PI / 180),
+                           cy + radius * (float)Math.Sin(startAngleDeg * Math.PI / 180));
+            context.PathArc(cx, cy, radius, startAngleDeg, endAngleDeg - startAngleDeg);
+        }
+
+        /// <summary>绘制解路径径向线段</summary>
+        private static void DrawSolRadial(IGraphicsContext context, float cx, float cy,
+            float angleDeg, float innerR, float outerR)
+        {
+            float rad = angleDeg * (float)Math.PI / 180;
+            float cos = (float)Math.Cos(rad);
+            float sin = (float)Math.Sin(rad);
+            context.MoveTo(cx + innerR * cos, cy + innerR * sin);
+            context.LineTo(cx + outerR * cos, cy + outerR * sin);
+        }
+
+        #endregion
 
         #region 解路径方向构建
 

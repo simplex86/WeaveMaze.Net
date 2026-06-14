@@ -5,6 +5,7 @@ namespace SimplexLab.WeaveMaze
 {
     /// <summary>
     /// 编织式迷宫墙壁渲染器。平台无关实现，通过 IGraphicsContext 抽象绘图操作。
+    /// 支持矩形和圆形两种拓扑结构的渲染。
     /// </summary>
     public class WeaveMazeRenderer
     {
@@ -59,8 +60,27 @@ namespace SimplexLab.WeaveMaze
             var cellOverEW = field.CellOverEW;
             if (cellWhite == null || cellOverNS == null || cellOverEW == null) return;
 
+            // 绘制背景
+            context.FillRectangle(0, 0, width, height, backgroundColor);
+
+            if (field is CircularWeaveMazeField)
+            {
+                DrawCircular(context, graph, cellWhite, cellOverNS, cellOverEW);
+            }
+            else
+            {
+                DrawRectangular(context, graph, cellWhite, cellOverNS, cellOverEW);
+            }
+        }
+
+        #region 矩形迷宫渲染
+
+        private void DrawRectangular(IGraphicsContext context,
+            List<List<WeaveAdjacency>> graph,
+            bool[] cellWhite, bool[] cellOverNS, bool[] cellOverEW)
+        {
             var mazeHeight = field.Height;
-            var mazeWidth  = field.Width;
+            var mazeWidth = field.Width;
 
             var cellSize = Math.Min((float)width / mazeWidth, (float)height / mazeHeight);
             var offsetX = ((float)width - cellSize * mazeWidth) / 2;
@@ -72,33 +92,19 @@ namespace SimplexLab.WeaveMaze
             var dm = cellSize / 2;
             var r0 = (d1 - d0) / 2;
 
-            // 绘制背景
-            context.FillRectangle(0, 0, width, height, backgroundColor);
-
-            // 平移变换
             context.PushTranslate(offsetX, offsetY);
 
             var lineW = lineWidthFrac * cellSize;
 
-            // 构建并描边墙壁路径
             context.BeginPath();
-            DrawWallPaths(context, graph, cellWhite, cellOverNS, cellOverEW, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
+            DrawRectWallPaths(context, graph, cellWhite, cellOverNS, cellOverEW, mazeHeight, mazeWidth, cellSize, d0, d1, dm, r0);
             context.EndPath();
             context.StrokePath(wallColor, lineW, roundedCorners);
 
             context.PopTransform();
         }
 
-        #region 墙壁绘制
-
-        private static bool HasDir(List<List<WeaveAdjacency>> graph, int vertex, int direction)
-        {
-            foreach (var adj in graph[vertex])
-                if (adj.Direction == direction) return true;
-            return false;
-        }
-
-        private void DrawWallPaths(IGraphicsContext context,
+        private void DrawRectWallPaths(IGraphicsContext context,
                                    List<List<WeaveAdjacency>> graph,
                                    bool[] cellWhite,
                                    bool[] cellOverNS,
@@ -303,6 +309,218 @@ namespace SimplexLab.WeaveMaze
                     pathBuilder.ArcTo(context, ox + d0, oy + d0, ox, oy + d0, d0);
                     break;
             }
+        }
+
+        #endregion
+
+        #region 圆形迷宫渲染
+
+        /// <summary>
+        /// 圆形迷宫渲染。
+        ///
+        /// 几何映射：矩形水平线 → 弧线（半径=常数），矩形垂直线 → 径向线（角度=常数）
+        ///
+        /// 每个单元格的通道区域定义为环形扇区：
+        ///   passInnerR = innerR + d0       （通道内径）
+        ///   passOuterR = innerR + d1       （通道外径）
+        ///   passStartAngle = startAngle + angD0  （通道起始角，CCW侧）
+        ///   passEndAngle = startAngle + angD1    （通道结束角，CW侧）
+        ///
+        /// 墙壁绘制规则（与矩形完全对应）：
+        ///   方向0(In)被阻断 → 弧线在 passInnerR，从 passStartAngle 到 passEndAngle
+        ///   方向2(Out)被阻断 → 弧线在 passOuterR，从 passStartAngle 到 passEndAngle
+        ///   方向3(CCW)被阻断 → 径向线在 passStartAngle，从 passInnerR 到 passOuterR
+        ///   方向1(CW)被阻断 → 径向线在 passEndAngle，从 passInnerR 到 passOuterR
+        ///
+        /// 延伸墙（通道开口到单元格边缘的连接墙）：
+        ///   In开放  → 径向线在 passStartAngle/passEndAngle，从 innerR 到 passInnerR
+        ///   Out开放 → 径向线在 passStartAngle/passEndAngle，从 passOuterR 到 outerR
+        ///   CCW开放 → 弧线在 passInnerR/passOuterR，从 startAngle 到 passStartAngle
+        ///   CW开放  → 弧线在 passInnerR/passOuterR，从 passEndAngle 到 endAngle
+        /// </summary>
+        private void DrawCircular(IGraphicsContext context,
+            List<List<WeaveAdjacency>> graph,
+            bool[] cellWhite, bool[] cellOverNS, bool[] cellOverEW)
+        {
+            int rings = field.Height;
+            int sectors = field.Width;
+
+            float cx = width / 2f;
+            float cy = height / 2f;
+            float maxRadius = Math.Min(width, height) / 2f * 0.95f;
+
+            float sectorAngle = 360f / sectors;
+            float ringWidth = maxRadius / rings;
+
+            float cellMarginFrac = (1 - passageWidthFrac) / 2;
+            float d0 = cellMarginFrac * ringWidth;
+            float d1 = (1 - cellMarginFrac) * ringWidth;
+            float angD0 = cellMarginFrac * sectorAngle;
+            float angD1 = (1 - cellMarginFrac) * sectorAngle;
+
+            var lineW = lineWidthFrac * ringWidth;
+
+            context.BeginPath();
+
+            for (int ring = 0; ring < rings; ring++)
+            {
+                for (int sector = 0; sector < sectors; sector++)
+                {
+                    int ci = field.CellIndex(sector, ring);
+                    if (!cellWhite[ci]) continue;
+
+                    float innerR = ring * ringWidth;
+                    float outerR = (ring + 1) * ringWidth;
+                    float startAngle = sector * sectorAngle;
+                    float endAngle = (sector + 1) * sectorAngle;
+
+                    float passInnerR = innerR + d0;
+                    float passOuterR = innerR + d1;
+                    float passStartAngle = startAngle + angD0;
+                    float passEndAngle = startAngle + angD1;
+
+                    if (cellOverNS[ci])
+                    {
+                        DrawCircularOverNS(context, cx, cy,
+                            innerR, outerR, startAngle, endAngle,
+                            passInnerR, passOuterR, passStartAngle, passEndAngle);
+                    }
+                    else if (cellOverEW[ci])
+                    {
+                        DrawCircularOverEW(context, cx, cy,
+                            innerR, outerR, startAngle, endAngle,
+                            passInnerR, passOuterR, passStartAngle, passEndAngle);
+                    }
+                    else
+                    {
+                        var lower = field.LowerIndex(sector, ring);
+                        int value = (HasDir(graph, lower, 0) ? 0b1000 : 0) |
+                                    (HasDir(graph, lower, 1) ? 0b0100 : 0) |
+                                    (HasDir(graph, lower, 2) ? 0b0010 : 0) |
+                                    (HasDir(graph, lower, 3) ? 0b0001 : 0);
+
+                        if (gateDirs.TryGetValue((sector, ring), out int gateBits))
+                            value |= gateBits;
+
+                        DrawCircularFlat(context, cx, cy,
+                            innerR, outerR, startAngle, endAngle,
+                            passInnerR, passOuterR, passStartAngle, passEndAngle, value);
+                    }
+                }
+            }
+
+            context.EndPath();
+            context.StrokePath(wallColor, lineW, roundedCorners);
+        }
+
+        /// <summary>
+        /// InOut 跨越单元格。
+        /// Upper 层走 In/Out（径向通道），Lower 层走 CW/CCW（弧向通道）。
+        /// 对应矩形的 DrawWallNorthSouthOver。
+        /// </summary>
+        private void DrawCircularOverNS(IGraphicsContext context, float cx, float cy,
+            float innerR, float outerR, float startAngle, float endAngle,
+            float passInnerR, float passOuterR, float passStartAngle, float passEndAngle)
+        {
+            // In/Out 通道侧壁（径向全幅，对应矩形两条垂直线）
+            DrawRadial(context, cx, cy, passStartAngle, innerR, outerR);
+            DrawRadial(context, cx, cy, passEndAngle, innerR, outerR);
+            // CW/CCW 通道侧壁（弧向分段，对应矩形四条水平线段）
+            DrawArc(context, cx, cy, passInnerR, startAngle, passStartAngle);
+            DrawArc(context, cx, cy, passInnerR, passEndAngle, endAngle);
+            DrawArc(context, cx, cy, passOuterR, startAngle, passStartAngle);
+            DrawArc(context, cx, cy, passOuterR, passEndAngle, endAngle);
+        }
+
+        /// <summary>
+        /// CWCCW 跨越单元格。
+        /// Upper 层走 CW/CCW（弧向通道），Lower 层走 In/Out（径向通道）。
+        /// 对应矩形的 DrawWallEastWestOver。
+        /// </summary>
+        private void DrawCircularOverEW(IGraphicsContext context, float cx, float cy,
+            float innerR, float outerR, float startAngle, float endAngle,
+            float passInnerR, float passOuterR, float passStartAngle, float passEndAngle)
+        {
+            // CW/CCW 通道侧壁（弧向全幅，对应矩形两条水平线）
+            DrawArc(context, cx, cy, passInnerR, startAngle, endAngle);
+            DrawArc(context, cx, cy, passOuterR, startAngle, endAngle);
+            // In/Out 通道侧壁（径向分段，对应矩形四条垂直线段）
+            DrawRadial(context, cx, cy, passStartAngle, innerR, passInnerR);
+            DrawRadial(context, cx, cy, passStartAngle, passOuterR, outerR);
+            DrawRadial(context, cx, cy, passEndAngle, innerR, passInnerR);
+            DrawRadial(context, cx, cy, passEndAngle, passOuterR, outerR);
+        }
+
+        /// <summary>
+        /// 平坦单元格的墙壁绘制。
+        /// 使用系统化方法：主墙（阻断方向）+ 延伸墙（开放方向到单元格边缘的连接）。
+        /// </summary>
+        private void DrawCircularFlat(IGraphicsContext context, float cx, float cy,
+            float innerR, float outerR, float startAngle, float endAngle,
+            float passInnerR, float passOuterR, float passStartAngle, float passEndAngle,
+            int value)
+        {
+            bool hasIn  = (value & 0b1000) != 0;
+            bool hasCW  = (value & 0b0100) != 0;
+            bool hasOut = (value & 0b0010) != 0;
+            bool hasCCW = (value & 0b0001) != 0;
+
+            // 主墙：阻断方向的通道边界
+            if (!hasIn)  DrawArc(context, cx, cy, passInnerR, passStartAngle, passEndAngle);
+            if (!hasOut) DrawArc(context, cx, cy, passOuterR, passStartAngle, passEndAngle);
+            if (!hasCCW) DrawRadial(context, cx, cy, passStartAngle, passInnerR, passOuterR);
+            if (!hasCW)  DrawRadial(context, cx, cy, passEndAngle, passInnerR, passOuterR);
+
+            // 延伸墙：开放方向从通道边界到单元格边缘
+            if (hasIn)
+            {
+                DrawRadial(context, cx, cy, passStartAngle, innerR, passInnerR);
+                DrawRadial(context, cx, cy, passEndAngle, innerR, passInnerR);
+            }
+            if (hasOut)
+            {
+                DrawRadial(context, cx, cy, passStartAngle, passOuterR, outerR);
+                DrawRadial(context, cx, cy, passEndAngle, passOuterR, outerR);
+            }
+            if (hasCCW)
+            {
+                DrawArc(context, cx, cy, passInnerR, startAngle, passStartAngle);
+                DrawArc(context, cx, cy, passOuterR, startAngle, passStartAngle);
+            }
+            if (hasCW)
+            {
+                DrawArc(context, cx, cy, passInnerR, passEndAngle, endAngle);
+                DrawArc(context, cx, cy, passOuterR, passEndAngle, endAngle);
+            }
+        }
+
+        /// <summary>绘制弧线段</summary>
+        private void DrawArc(IGraphicsContext context, float cx, float cy, float radius, float startAngleDeg, float endAngleDeg)
+        {
+            context.MoveTo(cx + radius * (float)Math.Cos(startAngleDeg * Math.PI / 180),
+                           cy + radius * (float)Math.Sin(startAngleDeg * Math.PI / 180));
+            context.PathArc(cx, cy, radius, startAngleDeg, endAngleDeg - startAngleDeg);
+        }
+
+        /// <summary>绘制径向线段（从内半径到外半径，指定角度）</summary>
+        private void DrawRadial(IGraphicsContext context, float cx, float cy, float angleDeg, float innerR, float outerR)
+        {
+            float rad = angleDeg * (float)Math.PI / 180;
+            float cos = (float)Math.Cos(rad);
+            float sin = (float)Math.Sin(rad);
+            context.MoveTo(cx + innerR * cos, cy + innerR * sin);
+            context.LineTo(cx + outerR * cos, cy + outerR * sin);
+        }
+
+        #endregion
+
+        #region 辅助方法
+
+        private static bool HasDir(List<List<WeaveAdjacency>> graph, int vertex, int direction)
+        {
+            foreach (var adj in graph[vertex])
+                if (adj.Direction == direction) return true;
+            return false;
         }
 
         #endregion

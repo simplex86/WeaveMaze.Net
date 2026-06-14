@@ -44,5 +44,24 @@ namespace SimplexLab.WeaveMaze
             }
             return mask;
         }
+
+        /// <summary>
+        /// 矩形拓扑邻居计算（与 RectangularWeaveMazeField 相同）。
+        /// 方向：0=北, 1=东, 2=南, 3=西
+        /// </summary>
+        internal override (int x, int y)? GetNeighbor(int x, int y, int direction) => direction switch
+        {
+            0 => y > 0 ? (x, y - 1) : null,
+            1 => x < Width - 1 ? (x + 1, y) : null,
+            2 => y < Height - 1 ? (x, y + 1) : null,
+            3 => x > 0 ? (x - 1, y) : null,
+            _ => null
+        };
+
+        /// <summary>
+        /// 矩形内部单元格：不在边界上的单元格
+        /// </summary>
+        internal override bool IsInteriorCell(int x, int y) =>
+            x >= 1 && x < Width - 1 && y >= 1 && y < Height - 1;
     }
 }

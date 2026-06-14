@@ -128,5 +128,26 @@ namespace SimplexLab.WeaveMaze
         /// 返回 bool[][]，索引为 [y][x]，true 表示可用。
         /// </summary>
         internal abstract bool[][] CreateCellWhiteMask();
+
+        #region 拓扑抽象
+
+        /// <summary>
+        /// 获取指定单元格在给定方向上的邻居坐标。
+        /// 方向约定：0 和 2 为对向（如北/南、内/外），1 和 3 为对向（如东/西、顺时针/逆时针）。
+        /// 返回 null 表示该方向无有效邻居（超出边界）。
+        /// </summary>
+        /// <param name="x">单元格列坐标</param>
+        /// <param name="y">单元格行坐标</param>
+        /// <param name="direction">方向索引（0~3）</param>
+        /// <returns>邻居坐标，或 null 表示无邻居</returns>
+        internal abstract (int x, int y)? GetNeighbor(int x, int y, int direction);
+
+        /// <summary>
+        /// 判断指定单元格是否为内部单元格（可作为环/交叉的中心）。
+        /// 内部单元格在所有四个方向上都有有效邻居。
+        /// </summary>
+        internal abstract bool IsInteriorCell(int x, int y);
+
+        #endregion
     }
 }

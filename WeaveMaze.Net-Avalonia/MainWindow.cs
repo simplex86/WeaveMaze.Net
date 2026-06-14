@@ -540,9 +540,9 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         private void OnMaskChangedHandler(object? sender, SelectionChangedEventArgs e)
         {
-            rectangularMazeControl.IsVisible = shape.SelectedIndex == 0;
-            customizedMazeControl.IsVisible = shape.SelectedIndex == 1;
-            circularMazeControl.IsVisible = shape.SelectedIndex == 2;
+            rectangularMazeControl.IsVisible = shape.SelectedIndex == (int)EWeaveMazeShape.Rectangular;
+            circularMazeControl.IsVisible = shape.SelectedIndex == (int)EWeaveMazeShape.Circular;
+            customizedMazeControl.IsVisible = shape.SelectedIndex == (int)EWeaveMazeShape.Customized;
         }
 
         private async void OnGeneratoinClickedHandler(object? sender, RoutedEventArgs e)

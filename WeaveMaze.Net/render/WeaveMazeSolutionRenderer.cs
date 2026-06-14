@@ -258,22 +258,29 @@ namespace SimplexLab.WeaveMaze
                     {
                         // In/Out 跨越：upper 走 In/Out（径向），lower 走 CW/CCW（弧向）
                         if ((upperDir & 0b1010) != 0)
-                            DrawSolRadial(context, cx, cy, centerAngle, innerR, outerR);
+                        {
+                            float ca = centerAngle * (float)Math.PI / 180;
+                            pathBuilder.MoveTo(context, cx + innerR * (float)Math.Cos(ca), cy + innerR * (float)Math.Sin(ca));
+                            pathBuilder.LineTo(context, cx + outerR * (float)Math.Cos(ca), cy + outerR * (float)Math.Sin(ca));
+                        }
                         if ((lowerDir & 0b0101) != 0)
                         {
-                            DrawSolArc(context, cx, cy, centerR, startAngle, passStartAngle);
-                            DrawSolArc(context, cx, cy, centerR, passEndAngle, endAngle);
+                            SolArcPB(context, cx, cy, centerR, startAngle, passStartAngle);
+                            SolArcPB(context, cx, cy, centerR, passEndAngle, endAngle);
                         }
                     }
                     else if (cellOverEW[ci])
                     {
                         // CW/CCW 跨越：upper 走 CW/CCW（弧向），lower 走 In/Out（径向）
                         if ((upperDir & 0b0101) != 0)
-                            DrawSolArc(context, cx, cy, centerR, startAngle, endAngle);
+                            SolArcPB(context, cx, cy, centerR, startAngle, endAngle);
                         if ((lowerDir & 0b1010) != 0)
                         {
-                            DrawSolRadial(context, cx, cy, centerAngle, innerR, passInnerR);
-                            DrawSolRadial(context, cx, cy, centerAngle, passOuterR, outerR);
+                            float ca = centerAngle * (float)Math.PI / 180;
+                            pathBuilder.MoveTo(context, cx + innerR * (float)Math.Cos(ca), cy + innerR * (float)Math.Sin(ca));
+                            pathBuilder.LineTo(context, cx + passInnerR * (float)Math.Cos(ca), cy + passInnerR * (float)Math.Sin(ca));
+                            pathBuilder.MoveTo(context, cx + passOuterR * (float)Math.Cos(ca), cy + passOuterR * (float)Math.Sin(ca));
+                            pathBuilder.LineTo(context, cx + outerR * (float)Math.Cos(ca), cy + outerR * (float)Math.Sin(ca));
                         }
                     }
                     else if (lowerDir != 0)
@@ -292,8 +299,7 @@ namespace SimplexLab.WeaveMaze
         /// <summary>
         /// 平坦单元格解路径绘制。
         /// 路径延伸到单元格边界（innerR/outerR/startAngle/endAngle），确保相邻单元格的路径连接。
-        /// In/Out 方向画径向线，CW/CCW 方向画弧线，都在单元格中心交汇。
-        /// 转弯（两个相邻方向）画为连续路径。
+        /// 使用 pathBuilder 支持圆角转弯。
         /// </summary>
         private void DrawCircularSolutionFlat(IGraphicsContext context, float cx, float cy,
             float innerR, float outerR, float startAngle, float endAngle,
@@ -314,16 +320,19 @@ namespace SimplexLab.WeaveMaze
             float ccwX = ToX(startAngle, centerR), ccwY = ToY(startAngle, centerR);
             float midX = ToX(centerAngle, centerR), midY = ToY(centerAngle, centerR);
 
+            // 圆角半径：取通道宽度的 1/4
+            float r0 = (outerR - innerR) / 4;
+
             int dirCount = (hasIn ? 1 : 0) + (hasCW ? 1 : 0) + (hasOut ? 1 : 0) + (hasCCW ? 1 : 0);
 
             switch (dirCount)
             {
                 case 1:
                     // 死胡同：从边界到中心
-                    if (hasIn) { context.MoveTo(inX, inY); context.LineTo(midX, midY); }
-                    else if (hasCW) { context.MoveTo(cwX, cwY); context.LineTo(midX, midY); }
-                    else if (hasOut) { context.MoveTo(outX, outY); context.LineTo(midX, midY); }
-                    else { context.MoveTo(ccwX, ccwY); context.LineTo(midX, midY); }
+                    if (hasIn) { pathBuilder.MoveTo(context, inX, inY); pathBuilder.LineTo(context, midX, midY); }
+                    else if (hasCW) { pathBuilder.MoveTo(context, cwX, cwY); pathBuilder.LineTo(context, midX, midY); }
+                    else if (hasOut) { pathBuilder.MoveTo(context, outX, outY); pathBuilder.LineTo(context, midX, midY); }
+                    else { pathBuilder.MoveTo(context, ccwX, ccwY); pathBuilder.LineTo(context, midX, midY); }
                     break;
 
                 case 2:
@@ -331,62 +340,70 @@ namespace SimplexLab.WeaveMaze
                     if (hasIn && hasOut)
                     {
                         // In-Out 直通：径向线
-                        context.MoveTo(inX, inY); context.LineTo(outX, outY);
+                        pathBuilder.MoveTo(context, inX, inY); pathBuilder.LineTo(context, outX, outY);
                     }
                     else if (hasCW && hasCCW)
                     {
-                        // CW-CCW 直通：弧线
-                        DrawSolArc(context, cx, cy, centerR, startAngle, endAngle);
+                        // CW-CCW 直通：弧线（用 pathBuilder 近似）
+                        pathBuilder.MoveTo(context, ccwX, ccwY);
+                        int steps = Math.Max(2, (int)Math.Abs(endAngle - startAngle) / 2);
+                        float step = (endAngle - startAngle) / steps;
+                        for (int si = 1; si <= steps; si++)
+                        {
+                            float a = startAngle + step * si;
+                            pathBuilder.LineTo(context,
+                                cx + centerR * (float)Math.Cos(a * Math.PI / 180),
+                                cy + centerR * (float)Math.Sin(a * Math.PI / 180));
+                        }
                     }
                     else
                     {
-                        // 转弯：连续路径，经过中心点
-                        // 先确定两个方向的边界点
+                        // 转弯：使用 ArcTo 实现圆角
                         (float x, float y) p1, p2;
-                        if (hasIn) { p1 = (inX, inY); }
-                        else if (hasCW) { p1 = (cwX, cwY); }
-                        else if (hasOut) { p1 = (outX, outY); }
-                        else { p1 = (ccwX, ccwY); }
+                        if (hasIn) p1 = (inX, inY);
+                        else if (hasCW) p1 = (cwX, cwY);
+                        else if (hasOut) p1 = (outX, outY);
+                        else p1 = (ccwX, ccwY);
 
-                        if (hasCCW) { p2 = (ccwX, ccwY); }
-                        else if (hasOut) { p2 = (outX, outY); }
-                        else if (hasCW) { p2 = (cwX, cwY); }
-                        else { p2 = (inX, inY); }
+                        if (hasCCW) p2 = (ccwX, ccwY);
+                        else if (hasOut) p2 = (outX, outY);
+                        else if (hasCW) p2 = (cwX, cwY);
+                        else p2 = (inX, inY);
 
-                        context.MoveTo(p1.x, p1.y);
-                        context.LineTo(midX, midY);
-                        context.LineTo(p2.x, p2.y);
+                        pathBuilder.MoveTo(context, p1.x, p1.y);
+                        pathBuilder.ArcTo(context, midX, midY, p2.x, p2.y, r0);
+                        // ArcTo 弧线终点在距拐角 r0 处，不在 p2（单元格边界），
+                        // 需要额外 LineTo 确保路径到达边界，与相邻单元格连接
+                        pathBuilder.LineTo(context, p2.x, p2.y);
                     }
                     break;
 
                 default:
                     // 3+ 方向：每个方向画一条从边界到中心的线
-                    if (hasIn) { context.MoveTo(inX, inY); context.LineTo(midX, midY); }
-                    if (hasCW) { context.MoveTo(cwX, cwY); context.LineTo(midX, midY); }
-                    if (hasOut) { context.MoveTo(outX, outY); context.LineTo(midX, midY); }
-                    if (hasCCW) { context.MoveTo(ccwX, ccwY); context.LineTo(midX, midY); }
+                    if (hasIn) { pathBuilder.MoveTo(context, inX, inY); pathBuilder.LineTo(context, midX, midY); }
+                    if (hasCW) { pathBuilder.MoveTo(context, cwX, cwY); pathBuilder.LineTo(context, midX, midY); }
+                    if (hasOut) { pathBuilder.MoveTo(context, outX, outY); pathBuilder.LineTo(context, midX, midY); }
+                    if (hasCCW) { pathBuilder.MoveTo(context, ccwX, ccwY); pathBuilder.LineTo(context, midX, midY); }
                     break;
             }
         }
 
-        /// <summary>绘制解路径弧线段</summary>
-        private static void DrawSolArc(IGraphicsContext context, float cx, float cy,
+        /// <summary>使用 pathBuilder 绘制解路径弧线段</summary>
+        private void SolArcPB(IGraphicsContext context, float cx, float cy,
             float radius, float startAngleDeg, float endAngleDeg)
         {
-            context.MoveTo(cx + radius * (float)Math.Cos(startAngleDeg * Math.PI / 180),
-                           cy + radius * (float)Math.Sin(startAngleDeg * Math.PI / 180));
-            context.PathArc(cx, cy, radius, startAngleDeg, endAngleDeg - startAngleDeg);
-        }
-
-        /// <summary>绘制解路径径向线段</summary>
-        private static void DrawSolRadial(IGraphicsContext context, float cx, float cy,
-            float angleDeg, float innerR, float outerR)
-        {
-            float rad = angleDeg * (float)Math.PI / 180;
-            float cos = (float)Math.Cos(rad);
-            float sin = (float)Math.Sin(rad);
-            context.MoveTo(cx + innerR * cos, cy + innerR * sin);
-            context.LineTo(cx + outerR * cos, cy + outerR * sin);
+            pathBuilder.MoveTo(context,
+                cx + radius * (float)Math.Cos(startAngleDeg * Math.PI / 180),
+                cy + radius * (float)Math.Sin(startAngleDeg * Math.PI / 180));
+            int steps = Math.Max(2, (int)Math.Abs(endAngleDeg - startAngleDeg) / 2);
+            float step = (endAngleDeg - startAngleDeg) / steps;
+            for (int i = 1; i <= steps; i++)
+            {
+                float a = startAngleDeg + step * i;
+                pathBuilder.LineTo(context,
+                    cx + radius * (float)Math.Cos(a * Math.PI / 180),
+                    cy + radius * (float)Math.Sin(a * Math.PI / 180));
+            }
         }
 
         #endregion

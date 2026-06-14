@@ -425,7 +425,6 @@ namespace SimplexLab.WeaveMaze
             // In/Out 通道侧壁（径向全幅，对应矩形两条垂直线）
             DrawRadial(context, cx, cy, passStartAngle, innerR, outerR);
             DrawRadial(context, cx, cy, passEndAngle, innerR, outerR);
-            // CW/CCW 通道侧壁（弧向分段，对应矩形四条水平线段）
             DrawArc(context, cx, cy, passInnerR, startAngle, passStartAngle);
             DrawArc(context, cx, cy, passInnerR, passEndAngle, endAngle);
             DrawArc(context, cx, cy, passOuterR, startAngle, passStartAngle);
@@ -444,17 +443,12 @@ namespace SimplexLab.WeaveMaze
             // CW/CCW 通道侧壁（弧向全幅，对应矩形两条水平线）
             DrawArc(context, cx, cy, passInnerR, startAngle, endAngle);
             DrawArc(context, cx, cy, passOuterR, startAngle, endAngle);
-            // In/Out 通道侧壁（径向分段，对应矩形四条垂直线段）
             DrawRadial(context, cx, cy, passStartAngle, innerR, passInnerR);
             DrawRadial(context, cx, cy, passStartAngle, passOuterR, outerR);
             DrawRadial(context, cx, cy, passEndAngle, innerR, passInnerR);
             DrawRadial(context, cx, cy, passEndAngle, passOuterR, outerR);
         }
 
-        /// <summary>
-        /// 平坦单元格的墙壁绘制。
-        /// 使用系统化方法：主墙（阻断方向）+ 延伸墙（开放方向到单元格边缘的连接）。
-        /// </summary>
         private void DrawCircularFlat(IGraphicsContext context, float cx, float cy,
             float innerR, float outerR, float startAngle, float endAngle,
             float passInnerR, float passOuterR, float passStartAngle, float passEndAngle,
@@ -465,13 +459,41 @@ namespace SimplexLab.WeaveMaze
             bool hasOut = (value & 0b0010) != 0;
             bool hasCCW = (value & 0b0001) != 0;
 
-            // 主墙：阻断方向的通道边界
-            if (!hasIn)  DrawArc(context, cx, cy, passInnerR, passStartAngle, passEndAngle);
-            if (!hasOut) DrawArc(context, cx, cy, passOuterR, passStartAngle, passEndAngle);
-            if (!hasCCW) DrawRadial(context, cx, cy, passStartAngle, passInnerR, passOuterR);
-            if (!hasCW)  DrawRadial(context, cx, cy, passEndAngle, passInnerR, passOuterR);
+            // 圆角模式下，墙壁在角落处缩短 r0，留出空间给圆角弧线
+            float r0 = roundedCorners ? (passOuterR - passInnerR) / 2 : 0;
+            // 弧墙的角度缩短量（弧长 = r0 对应的角度）
+            float angR0Inner = r0 > 0 ? r0 / passInnerR * (float)(180.0 / Math.PI) : 0;
+            float angR0Outer = r0 > 0 ? r0 / passOuterR * (float)(180.0 / Math.PI) : 0;
 
-            // 延伸墙：开放方向从通道边界到单元格边缘
+            // In 墙（弧线 passInnerR）：角落 A(CCW侧) 和 B(CW侧)
+            if (!hasIn)
+            {
+                float sa = passStartAngle + (!hasCCW ? angR0Inner : 0);
+                float ea = passEndAngle - (!hasCW ? angR0Inner : 0);
+                if (ea > sa) DrawArc(context, cx, cy, passInnerR, sa, ea);
+            }
+            // Out 墙（弧线 passOuterR）：角落 D(CCW侧) 和 C(CW侧)
+            if (!hasOut)
+            {
+                float sa = passStartAngle + (!hasCCW ? angR0Outer : 0);
+                float ea = passEndAngle - (!hasCW ? angR0Outer : 0);
+                if (ea > sa) DrawArc(context, cx, cy, passOuterR, sa, ea);
+            }
+            // CCW 墙（径向 passStartAngle）：角落 A(In侧) 和 D(Out侧)
+            if (!hasCCW)
+            {
+                float sr = passInnerR + (!hasIn ? r0 : 0);
+                float er = passOuterR - (!hasOut ? r0 : 0);
+                if (er > sr) DrawRadial(context, cx, cy, passStartAngle, sr, er);
+            }
+            // CW 墙（径向 passEndAngle）：角落 B(In侧) 和 C(Out侧)
+            if (!hasCW)
+            {
+                float sr = passInnerR + (!hasIn ? r0 : 0);
+                float er = passOuterR - (!hasOut ? r0 : 0);
+                if (er > sr) DrawRadial(context, cx, cy, passEndAngle, sr, er);
+            }
+
             if (hasIn)
             {
                 DrawRadial(context, cx, cy, passStartAngle, innerR, passInnerR);
@@ -492,6 +514,42 @@ namespace SimplexLab.WeaveMaze
                 DrawArc(context, cx, cy, passInnerR, passEndAngle, endAngle);
                 DrawArc(context, cx, cy, passOuterR, passEndAngle, endAngle);
             }
+
+            if (roundedCorners)
+                DrawCircularCorners(context, cx, cy,
+                    passInnerR, passOuterR, passStartAngle, passEndAngle,
+                    hasIn, hasCW, hasOut, hasCCW);
+        }
+
+        private void DrawCircularCorners(IGraphicsContext context, float cx, float cy,
+            float passInnerR, float passOuterR, float passStartAngle, float passEndAngle,
+            bool hasIn, bool hasCW, bool hasOut, bool hasCCW)
+        {
+            float r0 = (passOuterR - passInnerR) / 2;
+            if (!hasIn && !hasCCW)  DrawCornerArc(context, cx, cy, passStartAngle, passInnerR, r0, true, true);
+            if (!hasIn && !hasCW)   DrawCornerArc(context, cx, cy, passEndAngle, passInnerR, r0, true, false);
+            if (!hasOut && !hasCW)  DrawCornerArc(context, cx, cy, passEndAngle, passOuterR, r0, false, false);
+            if (!hasOut && !hasCCW) DrawCornerArc(context, cx, cy, passStartAngle, passOuterR, r0, false, true);
+        }
+
+        private void DrawCornerArc(IGraphicsContext context, float cx, float cy,
+            float angle, float radius, float r0, bool isInner, bool isCCW)
+        {
+            float rad = angle * (float)Math.PI / 180;
+            float cosA = (float)Math.Cos(rad), sinA = (float)Math.Sin(rad);
+            float cornerX = cx + radius * cosA, cornerY = cy + radius * sinA;
+            float rSign = isInner ? 1 : -1, aSign = isCCW ? 1 : -1;
+            float arcCX = cornerX + rSign * r0 * cosA - aSign * r0 * sinA;
+            float arcCY = cornerY + rSign * r0 * sinA + aSign * r0 * cosA;
+            float startX = cornerX - aSign * r0 * sinA, startY = cornerY + aSign * r0 * cosA;
+            float endX = cornerX + rSign * r0 * cosA, endY = cornerY + rSign * r0 * sinA;
+            float sa = (float)(Math.Atan2(startY - arcCY, startX - arcCX) * 180.0 / Math.PI);
+            float ea = (float)(Math.Atan2(endY - arcCY, endX - arcCX) * 180.0 / Math.PI);
+            float sweep = ea - sa;
+            if (sweep > 180) sweep -= 360;
+            if (sweep < -180) sweep += 360;
+            context.MoveTo(startX, startY);
+            context.PathArc(arcCX, arcCY, r0, sa, sweep);
         }
 
         /// <summary>绘制弧线段</summary>

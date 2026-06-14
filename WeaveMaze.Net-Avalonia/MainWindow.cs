@@ -17,11 +17,13 @@ namespace SimplexLab.WeaveMaze.TApplication
         private WeaveMazeField? mazeField;
         private WeaveMazeSolution mazeSolution;
         private WeaveMazeGate[]? mazeGates;
+        private WeaveMazeScore mazeScore;
 
         // Data - Reconstruction page
         private WeaveMazeField? reconField;
         private WeaveMazeSolution reconSolution;
         private WeaveMazeGate[]? reconGates;
+        private WeaveMazeScore reconScore;
 
         // Shared generators
         private WeaveMazeGenerator mazeGenerator = new();
@@ -38,6 +40,17 @@ namespace SimplexLab.WeaveMaze.TApplication
         private MazeCanvas canvas;
         private Button save;
 
+        // Score display controls - Generation page
+        private TextBlock genPathEfficiencyScore;
+        private TextBlock genStructuralComplexityScore;
+        private TextBlock genExplorationDepthScore;
+        private TextBlock genDecisionDensityScore;
+        private TextBlock genDeadEndReasonabilityScore;
+        private TextBlock genDeadEndDiversityScore;
+        private TextBlock genBranchBalanceScore;
+        private TextBlock genSolutionConcealmentScore;
+        private TextBlock genTotalScore;
+
         // Controls - Reconstruction page
         private TextBox reconFileName;
         private Button reconBrowse;
@@ -47,6 +60,17 @@ namespace SimplexLab.WeaveMaze.TApplication
         private CheckBox reconShowRoundedCorners;
         private CheckBox reconShowSolution;
         private MazeCanvas reconCanvas;
+
+        // Score display controls - Reconstruction page
+        private TextBlock reconPathEfficiencyScore;
+        private TextBlock reconStructuralComplexityScore;
+        private TextBlock reconExplorationDepthScore;
+        private TextBlock reconDecisionDensityScore;
+        private TextBlock reconDeadEndReasonabilityScore;
+        private TextBlock reconDeadEndDiversityScore;
+        private TextBlock reconBranchBalanceScore;
+        private TextBlock reconSolutionConcealmentScore;
+        private TextBlock reconTotalScore;
 
         public MainWindow()
         {
@@ -141,8 +165,8 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            // --- Generation page: right panel ---
-            var rightPanel = new Grid
+            // --- Generation page: middle panel (canvas + checkboxes) ---
+            var middlePanel = new Grid
             {
                 RowDefinitions = RowDefinitions.Parse("*,Auto"),
                 Children =
@@ -171,6 +195,41 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
+            // --- Generation page: right evaluation panel ---
+            genPathEfficiencyScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            genStructuralComplexityScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            genExplorationDepthScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            genDecisionDensityScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            genDeadEndReasonabilityScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            genDeadEndDiversityScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            genBranchBalanceScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            genSolutionConcealmentScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            genTotalScore = new TextBlock { Text = "0", FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+
+            var genRightPanel = new Border
+            {
+                BorderBrush = Brushes.LightGray,
+                BorderThickness = new Thickness(1, 0, 0, 0),
+                Padding = new Thickness(6),
+                Child = new StackPanel
+                {
+                    Children =
+                    {
+                        new TextBlock { Text = "质量评估报告", FontSize = 15, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 12), HorizontalAlignment = HorizontalAlignment.Center },
+                        MakeScoreRow("结构复杂度", genStructuralComplexityScore),
+                        MakeScoreRow("探索深度", genExplorationDepthScore),
+                        MakeScoreRow("决策密度", genDecisionDensityScore),
+                        MakeScoreRow("路径效率", genPathEfficiencyScore),
+                        MakeScoreRow("路径合理性", genDeadEndReasonabilityScore),
+                        MakeScoreRow("路径多样性", genDeadEndDiversityScore),
+                        MakeScoreRow("岔路均衡度", genBranchBalanceScore),
+                        MakeScoreRow("解的隐蔽性", genSolutionConcealmentScore),
+                        new Border { BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(0, 1, 0, 0), Margin = new Thickness(0, 8) },
+                        MakeScoreRow("总得分", genTotalScore),
+                    }
+                }
+            };
+
             // Generate button at bottom of left panel
             var leftWithButton = new Grid
             {
@@ -194,14 +253,15 @@ namespace SimplexLab.WeaveMaze.TApplication
                 Child = leftWithButton,
             };
 
-            // Generation page: fixed left + flexible right
+            // Generation page: left(300) + middle(*) + right(300)
             var generationPage = new Grid
             {
-                ColumnDefinitions = ColumnDefinitions.Parse("300,*"),
+                ColumnDefinitions = ColumnDefinitions.Parse("300,*,300"),
                 Children =
                 {
                     leftBorder,
-                    rightPanel.WithGridColumn(1),
+                    middlePanel.WithGridColumn(1),
+                    genRightPanel.WithGridColumn(2),
                 }
             };
 
@@ -314,8 +374,8 @@ namespace SimplexLab.WeaveMaze.TApplication
                 },
             };
 
-            // Right panel (canvas + checkboxes)
-            var reconRightPanel = new Grid
+            // Middle panel (canvas + checkboxes)
+            var reconMiddlePanel = new Grid
             {
                 RowDefinitions = RowDefinitions.Parse("*,Auto"),
                 Children =
@@ -337,14 +397,50 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            // Below top bar: fixed left + flexible right
+            // Right evaluation panel - Reconstruction page
+            reconPathEfficiencyScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            reconStructuralComplexityScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            reconExplorationDepthScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            reconDecisionDensityScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            reconDeadEndReasonabilityScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            reconDeadEndDiversityScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            reconBranchBalanceScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            reconSolutionConcealmentScore = new TextBlock { Text = "0", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            reconTotalScore = new TextBlock { Text = "0", FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+
+            var reconRightPanel = new Border
+            {
+                BorderBrush = Brushes.LightGray,
+                BorderThickness = new Thickness(1, 0, 0, 0),
+                Padding = new Thickness(6),
+                Child = new StackPanel
+                {
+                    Children =
+                    {
+                        new TextBlock { Text = "质量评估报告", FontSize = 15, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 12), HorizontalAlignment = HorizontalAlignment.Center },
+                        MakeScoreRow("结构复杂度", reconStructuralComplexityScore),
+                        MakeScoreRow("探索深度", reconExplorationDepthScore),
+                        MakeScoreRow("决策密度", reconDecisionDensityScore),
+                        MakeScoreRow("路径效率", reconPathEfficiencyScore),
+                        MakeScoreRow("路径合理性", reconDeadEndReasonabilityScore),
+                        MakeScoreRow("路径多样性", reconDeadEndDiversityScore),
+                        MakeScoreRow("岔路均衡度", reconBranchBalanceScore),
+                        MakeScoreRow("解的隐蔽性", reconSolutionConcealmentScore),
+                        new Border { BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(0, 1, 0, 0), Margin = new Thickness(0, 8) },
+                        MakeScoreRow("总得分", reconTotalScore),
+                    }
+                }
+            };
+
+            // Below top bar: left(300) + middle(*) + right(300)
             var reconContent = new Grid
             {
-                ColumnDefinitions = ColumnDefinitions.Parse("300,*"),
+                ColumnDefinitions = ColumnDefinitions.Parse("300,*,300"),
                 Children =
                 {
                     reconLeftBorder,
-                    reconRightPanel.WithGridColumn(1),
+                    reconMiddlePanel.WithGridColumn(1),
+                    reconRightPanel.WithGridColumn(2),
                 }
             };
 
@@ -384,6 +480,50 @@ namespace SimplexLab.WeaveMaze.TApplication
             Content = tabControl;
         }
 
+        private static Grid MakeScoreRow(string label, TextBlock valueControl)
+        {
+            return new Grid
+            {
+                ColumnDefinitions = ColumnDefinitions.Parse("*,Auto"),
+                Margin = new Thickness(0, 4),
+                Children =
+                {
+                    new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center },
+                    valueControl.WithGridColumn(1),
+                }
+            };
+        }
+
+        private static string FormatScore(double score) => score.ToString("F1");
+
+        private static string FormatTotal(double total) => total.ToString("F1");
+
+        private void UpdateGenScorePanel()
+        {
+            genPathEfficiencyScore.Text = FormatScore(mazeScore.PathEfficiencyScore);
+            genStructuralComplexityScore.Text = FormatScore(mazeScore.StructuralComplexityScore);
+            genExplorationDepthScore.Text = FormatScore(mazeScore.ExplorationDepthScore);
+            genDecisionDensityScore.Text = FormatScore(mazeScore.DecisionDensityScore);
+            genDeadEndReasonabilityScore.Text = FormatScore(mazeScore.DeadEndReasonabilityScore);
+            genDeadEndDiversityScore.Text = FormatScore(mazeScore.DeadEndDiversityScore);
+            genBranchBalanceScore.Text = FormatScore(mazeScore.BranchBalanceScore);
+            genSolutionConcealmentScore.Text = FormatScore(mazeScore.SolutionConcealmentScore);
+            genTotalScore.Text = FormatTotal(mazeScore.TotalScore);
+        }
+
+        private void UpdateReconScorePanel()
+        {
+            reconPathEfficiencyScore.Text = FormatScore(reconScore.PathEfficiencyScore);
+            reconStructuralComplexityScore.Text = FormatScore(reconScore.StructuralComplexityScore);
+            reconExplorationDepthScore.Text = FormatScore(reconScore.ExplorationDepthScore);
+            reconDecisionDensityScore.Text = FormatScore(reconScore.DecisionDensityScore);
+            reconDeadEndReasonabilityScore.Text = FormatScore(reconScore.DeadEndReasonabilityScore);
+            reconDeadEndDiversityScore.Text = FormatScore(reconScore.DeadEndDiversityScore);
+            reconBranchBalanceScore.Text = FormatScore(reconScore.BranchBalanceScore);
+            reconSolutionConcealmentScore.Text = FormatScore(reconScore.SolutionConcealmentScore);
+            reconTotalScore.Text = FormatTotal(reconScore.TotalScore);
+        }
+
         #region Handler
 
         private void OnMaskChangedHandler(object? sender, SelectionChangedEventArgs e)
@@ -402,6 +542,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             PrevProcess();
             {
                 await Generate();
+                await EvaluateMaze();
             }
             PostProcess();
         }
@@ -432,6 +573,15 @@ namespace SimplexLab.WeaveMaze.TApplication
             {
                 mazeSolution = solutionGenerator.Generate(mazeField);
                 mazeGates = gateGenerator.Generate(mazeField, mazeSolution);
+            }
+        }
+
+        private async Task EvaluateMaze()
+        {
+            if (mazeField != null && mazeGates != null)
+            {
+                mazeScore = await WeaveMazeScoreEvaluator.EvaluateAsync(mazeField, mazeGates, mazeSolution);
+                UpdateGenScorePanel();
             }
         }
 
@@ -511,6 +661,13 @@ namespace SimplexLab.WeaveMaze.TApplication
             reconField = field;
             reconGates = gates;
             reconSolution = solutionGenerator.Generate(reconField);
+
+            // Evaluate reconstruction maze
+            if (reconGates != null)
+            {
+                reconScore = WeaveMazeScoreEvaluator.Evaluate(reconField, reconGates, reconSolution);
+                UpdateReconScorePanel();
+            }
 
             // Update left panel to reflect loaded maze parameters
             bool isCustomized = field is CustomizedWeaveMazeField;

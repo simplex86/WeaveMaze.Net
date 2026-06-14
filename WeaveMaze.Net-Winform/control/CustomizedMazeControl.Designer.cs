@@ -1,4 +1,4 @@
-﻿namespace SimplexLab.WeaveMaze.TApplication
+namespace SimplexLab.WeaveMaze.TApplication
 {
     partial class CustomizedMazeControl
     {
@@ -66,7 +66,7 @@
             label3.Name = "label3";
             label3.Size = new System.Drawing.Size(92, 17);
             label3.TabIndex = 4;
-            label3.Text = "Loop  Fraction";
+            label3.Text = "Loop";
             // 
             // crossFraction
             // 
@@ -85,7 +85,7 @@
             label4.Name = "label4";
             label4.Size = new System.Drawing.Size(91, 17);
             label4.TabIndex = 6;
-            label4.Text = "Cross Fraction";
+            label4.Text = "Cross";
             // 
             // longPassages
             // 

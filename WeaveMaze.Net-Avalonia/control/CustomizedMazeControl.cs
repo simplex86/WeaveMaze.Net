@@ -48,7 +48,6 @@ namespace SimplexLab.WeaveMaze.TApplication
                 Increment = 1,
                 FormatString = "0",
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new Thickness(5, 0, 0, 0),
             };
 
             crossFraction = new NumericUpDown
@@ -59,7 +58,6 @@ namespace SimplexLab.WeaveMaze.TApplication
                 Increment = 1,
                 FormatString = "0",
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new Thickness(5, 0, 0, 0),
             };
 
             longPassages = new CheckBox
@@ -82,7 +80,6 @@ namespace SimplexLab.WeaveMaze.TApplication
                 {
                     IsReadOnly = true,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
-                    Margin = new Thickness(5, 0, 0, 0),
                 };
 
                 brower = new Button
@@ -95,7 +92,7 @@ namespace SimplexLab.WeaveMaze.TApplication
 
                 panel.Children.Add(new Grid
                 {
-                    ColumnDefinitions = ColumnDefinitions.Parse("95,*,Auto"),
+                    ColumnDefinitions = ColumnDefinitions.Parse("80,*,Auto"),
                     Children =
                     {
                         new TextBlock { Text = "Mask Path", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
@@ -107,19 +104,19 @@ namespace SimplexLab.WeaveMaze.TApplication
 
             panel.Children.Add(new Grid
             {
-                ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
+                ColumnDefinitions = ColumnDefinitions.Parse("80,*"),
                 Children =
                 {
-                    new TextBlock { Text = "Loop  Fraction", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                    new TextBlock { Text = "Loop", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
                     loopFraction.WithGridColumn(1),
                 }
             });
             panel.Children.Add(new Grid
             {
-                ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
+                ColumnDefinitions = ColumnDefinitions.Parse("80,*"),
                 Children =
                 {
-                    new TextBlock { Text = "Cross Fraction", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                    new TextBlock { Text = "Cross", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
                     crossFraction.WithGridColumn(1),
                 }
             });

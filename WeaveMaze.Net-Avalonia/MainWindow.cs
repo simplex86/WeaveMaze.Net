@@ -84,7 +84,6 @@ namespace SimplexLab.WeaveMaze.TApplication
                 ItemsSource = new[] { "Rectangular", "Customized" },
                 SelectedIndex = 0,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new Thickness(5, 0, 0, 0),
             };
             shape.SelectionChanged += OnMaskChangedHandler;
 
@@ -101,14 +100,14 @@ namespace SimplexLab.WeaveMaze.TApplication
             generation = new Button
             {
                 Content = "Generate",
-                Background = Brushes.LightSkyBlue,
-                FontWeight = FontWeight.Bold,
-                FontSize = 16,
+                Background = new SolidColorBrush(Color.FromRgb(0x87, 0xCE, 0xEB)),
+                FontSize = 19,
+                FontFamily = new FontFamily("Microsoft YaHei UI"),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Center,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                Height = 70,
-                Margin = new Thickness(3, 0, 3, 3),
+                Height = 60,
+                Margin = new Thickness(2, 8, 2, 2),
             };
             generation.Click += OnGeneratoinClickedHandler;
 
@@ -136,10 +135,14 @@ namespace SimplexLab.WeaveMaze.TApplication
             save = new Button
             {
                 Content = "Save",
+                HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center,
-                Padding = new Thickness(16, 8),
-                Background = Brushes.DodgerBlue,
-                Foreground = Brushes.White,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Background = new SolidColorBrush(Color.FromRgb(0x87, 0xCE, 0xEB)),
+                Width = 80,
+                Height = 40,
+                Margin = new Thickness(0, 4, 8, 4),
             };
             save.Click += OnSaveClickedHandler;
 
@@ -153,7 +156,8 @@ namespace SimplexLab.WeaveMaze.TApplication
                 {
                     new Grid
                     {
-                        ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
+                        ColumnDefinitions = ColumnDefinitions.Parse("80,*"),
+                        Margin = new Thickness(0, 0, 0, 8),
                         Children =
                         {
                             new TextBlock { Text = "Shape", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
@@ -176,13 +180,13 @@ namespace SimplexLab.WeaveMaze.TApplication
                     {
                         ColumnDefinitions = ColumnDefinitions.Parse("*,Auto"),
                         VerticalAlignment = VerticalAlignment.Bottom,
-                        Margin = new Thickness(4),
+                        Margin = new Thickness(8, 4),
                         Children =
                         {
                             new StackPanel
                             {
                                 Orientation = Orientation.Horizontal,
-                                Spacing = 16,
+                                Spacing = 24,
                                 Children =
                                 {
                                     showRoundedCorners,
@@ -253,15 +257,16 @@ namespace SimplexLab.WeaveMaze.TApplication
                 Child = leftWithButton,
             };
 
-            // Generation page: left(300) + middle(*) + right(300)
+            // Generation page: left(290) + middle(*) + right(290), with bottom row for checkboxes
             var generationPage = new Grid
             {
-                ColumnDefinitions = ColumnDefinitions.Parse("300,*,300"),
+                ColumnDefinitions = ColumnDefinitions.Parse("290,*,290"),
+                RowDefinitions = RowDefinitions.Parse("*,Auto"),
                 Children =
                 {
                     leftBorder,
                     middlePanel.WithGridColumn(1),
-                    genRightPanel.WithGridColumn(2),
+                    genRightPanel.WithGridColumn(2).WithGridRow(0),
                 }
             };
 
@@ -270,18 +275,14 @@ namespace SimplexLab.WeaveMaze.TApplication
             {
                 IsReadOnly = true,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new Thickness(5, 0, 0, 0),
             };
 
             reconBrowse = new Button
             {
                 Content = "...",
-                Width = 36,
-                Height = 36,
-                Background = Brushes.DodgerBlue,
-                Foreground = Brushes.White,
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Center,
+                Background = new SolidColorBrush(Color.FromRgb(0x87, 0xCE, 0xEB)),
+                VerticalAlignment = VerticalAlignment.Stretch,
+                Margin = new Thickness(4, 0, 0, 0),
             };
             reconBrowse.Click += OnReconBrowseClickedHandler;
 
@@ -290,7 +291,6 @@ namespace SimplexLab.WeaveMaze.TApplication
                 ItemsSource = new[] { "Rectangular", "Customized" },
                 SelectedIndex = 0,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new Thickness(5, 0, 0, 0),
                 IsEnabled = false,
             };
 
@@ -330,8 +330,8 @@ namespace SimplexLab.WeaveMaze.TApplication
             // Top: file selector
             var reconTopBar = new Grid
             {
-                ColumnDefinitions = ColumnDefinitions.Parse("95,*,Auto"),
-                Margin = new Thickness(4),
+                ColumnDefinitions = ColumnDefinitions.Parse("80,*,Auto"),
+                Margin = new Thickness(6, 0, 0, 4),
                 Children =
                 {
                     new TextBlock { Text = "Selection", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
@@ -350,7 +350,8 @@ namespace SimplexLab.WeaveMaze.TApplication
                 {
                     new Grid
                     {
-                        ColumnDefinitions = ColumnDefinitions.Parse("95,*"),
+                        ColumnDefinitions = ColumnDefinitions.Parse("80,*"),
+                        Margin = new Thickness(0, 0, 0, 8),
                         Children =
                         {
                             new TextBlock { Text = "Shape", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
@@ -384,10 +385,10 @@ namespace SimplexLab.WeaveMaze.TApplication
                     new StackPanel
                     {
                         Orientation = Orientation.Horizontal,
-                        Spacing = 16,
+                        Spacing = 24,
                         HorizontalAlignment = HorizontalAlignment.Left,
                         VerticalAlignment = VerticalAlignment.Bottom,
-                        Margin = new Thickness(4),
+                        Margin = new Thickness(8, 4),
                         Children =
                         {
                             reconShowRoundedCorners,
@@ -432,15 +433,16 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            // Below top bar: left(300) + middle(*) + right(300)
+            // Below top bar: left(290) + middle(*) + right(290)
             var reconContent = new Grid
             {
-                ColumnDefinitions = ColumnDefinitions.Parse("300,*,300"),
+                ColumnDefinitions = ColumnDefinitions.Parse("290,*,290"),
+                RowDefinitions = RowDefinitions.Parse("*,Auto"),
                 Children =
                 {
                     reconLeftBorder,
                     reconMiddlePanel.WithGridColumn(1),
-                    reconRightPanel.WithGridColumn(2),
+                    reconRightPanel.WithGridColumn(2).WithGridRow(0).WithGridRowSpan(2),
                 }
             };
 
@@ -458,6 +460,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             // --- TabControl ---
             var tabControl = new TabControl
             {
+                Padding = new Thickness(2),
                 Items =
                 {
                     new TabItem
@@ -473,9 +476,11 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            Title = "SimplexLab-WeaveMaze v0.8.28";
-            Width = 1200;
-            Height = 800;
+            Title = "SimplexLab-WeaveMaze v0.8.29";
+            Width = 1400;
+            Height = 780;
+            MinWidth = 1400;
+            MinHeight = 780;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Content = tabControl;
         }
@@ -807,6 +812,12 @@ namespace SimplexLab.WeaveMaze.TApplication
         public static T WithGridColumn<T>(this T control, int column) where T : Control
         {
             Grid.SetColumn(control, column);
+            return control;
+        }
+
+        public static T WithGridRowSpan<T>(this T control, int span) where T : Control
+        {
+            Grid.SetRowSpan(control, span);
             return control;
         }
     }

@@ -82,7 +82,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         {
             shape = new ComboBox
             {
-                ItemsSource = new[] { "Rectangular", "Customized", "Circular" },
+                ItemsSource = new[] { "Rectangular", "Circular", "Customized" },
                 SelectedIndex = 0,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
@@ -483,7 +483,7 @@ namespace SimplexLab.WeaveMaze.TApplication
                 }
             };
 
-            Title = "SimplexLab-WeaveMaze v0.8.29";
+            Title = "SimplexLab-WeaveMaze v0.9.35";
             Width = 1400;
             Height = 780;
             MinWidth = 1400;

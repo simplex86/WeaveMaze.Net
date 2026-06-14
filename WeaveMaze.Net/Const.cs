@@ -10,12 +10,12 @@ namespace SimplexLab.WeaveMaze
         /// </summary>
         Rectangular,
         /// <summary>
-        /// 自定义
-        /// </summary>
-        Customized,
-        /// <summary>
         /// 圆形
         /// </summary>
         Circular,
+        /// <summary>
+        /// 自定义
+        /// </summary>
+        Customized,
     }
 }

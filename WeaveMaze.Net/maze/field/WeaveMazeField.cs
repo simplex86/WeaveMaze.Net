@@ -148,6 +148,18 @@ namespace SimplexLab.WeaveMaze
         /// </summary>
         internal abstract bool IsInteriorCell(int x, int y);
 
+        /// <summary>
+        /// 判断指定单元格是否可作为解法路径的端点（边界单元格）。
+        /// 默认所有白色边界单元格均可。子类可重写以限制端点位置（如圆形迷宫仅外环）。
+        /// </summary>
+        internal virtual bool IsValidSolutionEndpoint(int x, int y) => true;
+
+        /// <summary>
+        /// 判断指定单元格的指定方向是否可以放置出入口。
+        /// 默认所有边界方向均可。子类可重写以限制出入口位置（如圆形迷宫仅外环向外）。
+        /// </summary>
+        internal virtual bool CanPlaceGate(int x, int y, int direction) => true;
+
         #endregion
     }
 }

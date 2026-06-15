@@ -102,7 +102,10 @@ namespace SimplexLab.WeaveMaze
             var borderVertices = new HashSet<int>();
             foreach (var cellIdx in borderCells)
             {
-                borderVertices.Add(cellIdx * 2);
+                int x = cellIdx % width;
+                int y = cellIdx / width;
+                if (field.IsValidSolutionEndpoint(x, y))
+                    borderVertices.Add(cellIdx * 2);
             }
             return borderVertices;
         }

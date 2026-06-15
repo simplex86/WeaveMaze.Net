@@ -22,6 +22,13 @@ namespace SimplexLab.WeaveMaze
         /// <summary>默认扇区数</summary>
         public const int DefaultSectors = 24;
 
+        /// <summary>
+        /// 默认最小内弧占比：内弧长度占环宽的最小比例（0~1）。
+        /// 当某环的内弧长度与环宽之比小于此值时，该环不参与迷宫生成。
+        /// 默认 0.75，对 24 扇区恰好跳过内层 3 环。
+        /// </summary>
+        public const double DefaultMinInnerArcFrac = 0.75;
+
         /// <summary>环数（同心圆层数），即 Height</summary>
         public int Rings => Height;
 
@@ -29,10 +36,30 @@ namespace SimplexLab.WeaveMaze
         public int Sectors => Width;
 
         /// <summary>
+        /// 最小内弧占比（0~1）。内弧长度 = 2π × 环索引 × 环宽 / 扇区数，
+        /// 当内弧长度 / 环宽 &lt; MinInnerArcFrac 时，该环被视为无效层。
+        /// </summary>
+        public double MinInnerArcFrac { get; }
+
+        /// <summary>
+        /// 根据 MinInnerArcFrac 和 Sectors 动态计算的跳过环数。
+        /// 环 i 的内弧比 = 2πi/sectors，首个满足条件的 i 即为 SkipRings。
+        /// </summary>
+        public int SkipRings => Math.Max(0, (int)Math.Ceiling(MinInnerArcFrac * Sectors / (2.0 * Math.PI)));
+
+        /// <summary>
         /// 创建圆形编织式迷宫字段，使用默认值
         /// </summary>
         public CircularWeaveMazeField()
-            : this(DefaultRings, DefaultSectors, DefaultLoopFrac, DefaultCrossFrac, DefaultLongPassages)
+            : this(DefaultRings, DefaultSectors, DefaultLoopFrac, DefaultCrossFrac, DefaultLongPassages, DefaultMinInnerArcFrac)
+        {
+        }
+
+        /// <summary>
+        /// 创建圆形编织式迷宫字段（兼容旧接口，使用默认最小内弧占比）
+        /// </summary>
+        public CircularWeaveMazeField(int rings, int sectors, double loopFrac, double crossFrac, bool longPassages)
+            : this(rings, sectors, loopFrac, crossFrac, longPassages, DefaultMinInnerArcFrac)
         {
         }
 
@@ -44,23 +71,27 @@ namespace SimplexLab.WeaveMaze
         /// <param name="loopFrac">环比例（0~1）</param>
         /// <param name="crossFrac">交叉比例（0~1）</param>
         /// <param name="longPassages">是否启用长通道模式</param>
-        public CircularWeaveMazeField(int rings, int sectors, double loopFrac, double crossFrac, bool longPassages)
+        /// <param name="minInnerArcFrac">最小内弧占比（0~1），内弧长度占环宽的最小比例</param>
+        public CircularWeaveMazeField(int rings, int sectors, double loopFrac, double crossFrac, bool longPassages, double minInnerArcFrac)
             : base(sectors, rings, loopFrac, crossFrac, longPassages)
         {
+            MinInnerArcFrac = minInnerArcFrac;
         }
 
         /// <summary>
-        /// 创建单元格白色遮罩。无遮罩时所有单元格均为白色。
+        /// 创建单元格白色遮罩。内弧长度不足的环标记为不可用（黑色），
+        /// 其余环标记为可用（白色）。
         /// </summary>
         internal override bool[][] CreateCellWhiteMask()
         {
+            int skip = SkipRings;
             var mask = new bool[Height][];
             for (int i = Height - 1; i >= 0; --i)
             {
                 mask[i] = new bool[Width];
                 for (int j = Width - 1; j >= 0; --j)
                 {
-                    mask[i][j] = true;
+                    mask[i][j] = i >= skip;
                 }
             }
             return mask;
@@ -80,9 +111,24 @@ namespace SimplexLab.WeaveMaze
         };
 
         /// <summary>
-        /// 圆形内部单元格：不在最内环和最外环上的单元格
+        /// 圆形内部单元格：不在最内层有效环（SkipRings）和最外环上的单元格。
+        /// 最内层有效环的向内邻居为被跳过的环，不可作为环/交叉的中心。
         /// </summary>
         internal override bool IsInteriorCell(int x, int y) =>
-            y >= 1 && y < Height - 1;
+            y > SkipRings && y < Height - 1;
+
+        /// <summary>
+        /// 圆形迷宫解法路径端点仅限外环（y = Height - 1），
+        /// 避免出入口出现在内层较小的圆弧上。
+        /// </summary>
+        internal override bool IsValidSolutionEndpoint(int x, int y) =>
+            y == Height - 1;
+
+        /// <summary>
+        /// 圆形迷宫出入口仅允许在外环的向外方向（方向2），
+        /// 确保出入口清晰可见。
+        /// </summary>
+        internal override bool CanPlaceGate(int x, int y, int direction) =>
+            direction == 2 && y == Height - 1;
     }
 }

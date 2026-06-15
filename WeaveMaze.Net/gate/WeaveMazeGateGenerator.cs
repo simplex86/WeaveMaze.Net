@@ -70,19 +70,19 @@ namespace SimplexLab.WeaveMaze
                 switch (permutation[i])
                 {
                     case 0: // 北
-                        if (y == 0 || !field.CellWhite[field.CellIndex(x, y - 1)])
+                        if ((y == 0 || !field.CellWhite[field.CellIndex(x, y - 1)]) && field.CanPlaceGate(x, y, 0))
                             return new WeaveMazeGate(x, y, 0);
                         break;
                     case 1: // 东
-                        if (x == field.Width - 1 || !field.CellWhite[field.CellIndex(x + 1, y)])
+                        if ((x == field.Width - 1 || !field.CellWhite[field.CellIndex(x + 1, y)]) && field.CanPlaceGate(x, y, 1))
                             return new WeaveMazeGate(x, y, 1);
                         break;
                     case 2: // 南
-                        if (y == field.Height - 1 || !field.CellWhite[field.CellIndex(x, y + 1)])
+                        if ((y == field.Height - 1 || !field.CellWhite[field.CellIndex(x, y + 1)]) && field.CanPlaceGate(x, y, 2))
                             return new WeaveMazeGate(x, y, 2);
                         break;
                     default: // 西
-                        if (x == 0 || !field.CellWhite[field.CellIndex(x - 1, y)])
+                        if ((x == 0 || !field.CellWhite[field.CellIndex(x - 1, y)]) && field.CanPlaceGate(x, y, 3))
                             return new WeaveMazeGate(x, y, 3);
                         break;
                 }

@@ -774,11 +774,12 @@ namespace SimplexLab.WeaveMaze.TApplication
             var loopFrac = circularMazeControl.LoopFraction;
             var crossFrac = circularMazeControl.CrossFraction;
             var longPassages = circularMazeControl.LongPassages;
+            var minInnerArcFrac = circularMazeControl.MinInnerArcFrac;
 
             if (r <= 0) r = CircularWeaveMazeField.DefaultRings;
             if (s <= 0) s = CircularWeaveMazeField.DefaultSectors;
 
-            var field = new CircularWeaveMazeField(r, s, loopFrac, crossFrac, longPassages);
+            var field = new CircularWeaveMazeField(r, s, loopFrac, crossFrac, longPassages, minInnerArcFrac);
             mazeField = await mazeGenerator.GenerateAsync(field);
         }
 

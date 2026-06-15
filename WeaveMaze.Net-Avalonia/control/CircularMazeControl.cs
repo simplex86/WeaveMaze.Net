@@ -8,6 +8,7 @@ namespace SimplexLab.WeaveMaze.TApplication
     {
         private NumericUpDown rings;
         private NumericUpDown sectors;
+        private NumericUpDown minArcLength;
         private NumericUpDown loopFraction;
         private NumericUpDown crossFraction;
         private CheckBox longPassages;
@@ -24,14 +25,16 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         public int MazeRings => (int)(rings.Value ?? 0);
         public int MazeSectors => (int)(sectors.Value ?? 0);
+        public double MinInnerArcFrac => (double)(minArcLength.Value ?? 0) / 100.0;
         public double LoopFraction => (double)(loopFraction.Value ?? 0) / 100.0;
         public double CrossFraction => (double)(crossFraction.Value ?? 0) / 100.0;
         public bool LongPassages => longPassages.IsChecked == true;
 
-        public void SetReconstructionValues(int r, int s, double loopFrac, double crossFrac, bool longPass)
+        public void SetReconstructionValues(int r, int s, double minArcFrac, double loopFrac, double crossFrac, bool longPass)
         {
             rings.Value = r;
             sectors.Value = s;
+            minArcLength.Value = (decimal)(minArcFrac * 100);
             loopFraction.Value = (decimal)(loopFrac * 100);
             crossFraction.Value = (decimal)(crossFrac * 100);
             longPassages.IsChecked = longPass;
@@ -52,6 +55,16 @@ namespace SimplexLab.WeaveMaze.TApplication
                 Minimum = 0,
                 Maximum = 200,
                 Value = 0,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+            };
+
+            minArcLength = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 100,
+                Value = (decimal)(CircularWeaveMazeField.DefaultMinInnerArcFrac * 100),
+                Increment = 5,
+                FormatString = "0",
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
 
@@ -102,6 +115,15 @@ namespace SimplexLab.WeaveMaze.TApplication
                         {
                             new TextBlock { Text = "Sectors", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
                             sectors.WithGridColumn(1),
+                        }
+                    },
+                    new Grid
+                    {
+                        ColumnDefinitions = ColumnDefinitions.Parse("80,*"),
+                        Children =
+                        {
+                            new TextBlock { Text = "Min Arc", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                            minArcLength.WithGridColumn(1),
                         }
                     },
                     new Grid

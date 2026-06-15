@@ -386,7 +386,7 @@ namespace SimplexLab.WeaveMaze
             }
 
             // 随机打乱
-            Shuffle(nodes);
+            nodes.Shuffle(random);
 
             int nodeIndex = 0;
             while (nodeIndex < nodes.Count)
@@ -482,15 +482,15 @@ namespace SimplexLab.WeaveMaze
             }
         }
 
-        private void Shuffle(List<int> list)
-        {
-            for (int i = list.Count - 1; i > 0; --i)
-            {
-                int j = (int)((i + 1) * random.NextDouble());
-                if (j > i) j = i;
-                (list[i], list[j]) = (list[j], list[i]);
-            }
-        }
+        //private void Shuffle(List<int> list)
+        //{
+        //    for (int i = list.Count - 1; i > 0; --i)
+        //    {
+        //        int j = (int)((i + 1) * random.NextDouble());
+        //        if (j > i) j = i;
+        //        (list[i], list[j]) = (list[j], list[i]);
+        //    }
+        //}
 
         #endregion
 

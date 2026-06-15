@@ -461,6 +461,15 @@ namespace SimplexLab.WeaveMaze
 
             // 圆角模式下，墙壁在角落处缩短 r0，留出空间给圆角弧线
             float r0 = roundedCorners ? (passOuterR - passInnerR) / 2 : 0;
+            // 限制圆角半径：内层 passInnerR 较小时，角弧对应的角度缩短量可能超出通道角度范围，
+            // 导致角弧交叉。约束条件：angR0Inner <= 通道角度跨度 / 2
+            if (r0 > 0 && passInnerR > 0)
+            {
+                float passageAngleSpan = passEndAngle - passStartAngle;
+                float maxAngR0 = passageAngleSpan / 2;
+                float r0FromAng = maxAngR0 * passInnerR * (float)(Math.PI / 180.0);
+                r0 = Math.Min(r0, r0FromAng);
+            }
             // 弧墙的角度缩短量（弧长 = r0 对应的角度）
             float angR0Inner = r0 > 0 ? r0 / passInnerR * (float)(180.0 / Math.PI) : 0;
             float angR0Outer = r0 > 0 ? r0 / passOuterR * (float)(180.0 / Math.PI) : 0;
@@ -518,14 +527,13 @@ namespace SimplexLab.WeaveMaze
             if (roundedCorners)
                 DrawCircularCorners(context, cx, cy,
                     passInnerR, passOuterR, passStartAngle, passEndAngle,
-                    hasIn, hasCW, hasOut, hasCCW);
+                    hasIn, hasCW, hasOut, hasCCW, r0);
         }
 
         private void DrawCircularCorners(IGraphicsContext context, float cx, float cy,
             float passInnerR, float passOuterR, float passStartAngle, float passEndAngle,
-            bool hasIn, bool hasCW, bool hasOut, bool hasCCW)
+            bool hasIn, bool hasCW, bool hasOut, bool hasCCW, float r0)
         {
-            float r0 = (passOuterR - passInnerR) / 2;
             if (!hasIn && !hasCCW)  DrawCornerArc(context, cx, cy, passStartAngle, passInnerR, r0, true, true);
             if (!hasIn && !hasCW)   DrawCornerArc(context, cx, cy, passEndAngle, passInnerR, r0, true, false);
             if (!hasOut && !hasCW)  DrawCornerArc(context, cx, cy, passEndAngle, passOuterR, r0, false, false);

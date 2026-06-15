@@ -46,7 +46,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             {
                 Minimum = 0,
                 Maximum = 200,
-                Value = 0,
+                Value = CircularWeaveMazeField.DefaultRings,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
 
@@ -54,7 +54,7 @@ namespace SimplexLab.WeaveMaze.TApplication
             {
                 Minimum = 0,
                 Maximum = 200,
-                Value = 0,
+                Value = CircularWeaveMazeField.DefaultSectors,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
 

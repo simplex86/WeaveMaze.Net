@@ -23,11 +23,15 @@ namespace SimplexLab.WeaveMaze
         public const int DefaultSectors = 24;
 
         /// <summary>
-        /// 默认最小内弧占比：内弧长度占环宽的最小比例（0~1）。
-        /// 当某环的内弧长度与环宽之比小于此值时，该环不参与迷宫生成。
-        /// 默认 0.75，对 24 扇区恰好跳过内层 3 环。
+        /// 默认最小内弧长度（像素）：内弧长度小于此值的环不参与迷宫生成。
+        /// 默认 15.0 像素。
         /// </summary>
-        public const double DefaultMinInnerArcFrac = 0.75;
+        public const double DefaultMinInnerArcLength = 15.0;
+
+        /// <summary>
+        /// 默认环宽（像素），用于在无渲染上下文时计算 SkipRings。
+        /// </summary>
+        public const double DefaultRingWidth = 25.0;
 
         /// <summary>环数（同心圆层数），即 Height</summary>
         public int Rings => Height;
@@ -36,30 +40,35 @@ namespace SimplexLab.WeaveMaze
         public int Sectors => Width;
 
         /// <summary>
-        /// 最小内弧占比（0~1）。内弧长度 = 2π × 环索引 × 环宽 / 扇区数，
-        /// 当内弧长度 / 环宽 &lt; MinInnerArcFrac 时，该环被视为无效层。
+        /// 最小内弧长度（像素）。内弧长度 = 2π × 环索引 × 环宽 / 扇区数，
+        /// 当内弧长度 &lt; MinInnerArcLength 时，该环被视为无效层。
         /// </summary>
-        public double MinInnerArcFrac { get; }
+        public double MinInnerArcLength { get; }
+
+        /// <summary>环宽（像素），用于计算各环内弧长度</summary>
+        public double RingWidth { get; }
 
         /// <summary>
-        /// 根据 MinInnerArcFrac 和 Sectors 动态计算的跳过环数。
-        /// 环 i 的内弧比 = 2πi/sectors，首个满足条件的 i 即为 SkipRings。
+        /// 根据 MinInnerArcLength、RingWidth 和 Sectors 动态计算的跳过环数。
+        /// 环 i 的内弧长度 = 2πi×ringWidth/sectors，首个内弧长度 ≥ MinInnerArcLength 的 i 即为 SkipRings。
         /// </summary>
-        public int SkipRings => Math.Max(0, (int)Math.Ceiling(MinInnerArcFrac * Sectors / (2.0 * Math.PI)));
+        public int SkipRings => RingWidth > 0
+            ? Math.Max(0, (int)Math.Ceiling(MinInnerArcLength * Sectors / (2.0 * Math.PI * RingWidth)))
+            : 0;
 
         /// <summary>
         /// 创建圆形编织式迷宫字段，使用默认值
         /// </summary>
         public CircularWeaveMazeField()
-            : this(DefaultRings, DefaultSectors, DefaultLoopFrac, DefaultCrossFrac, DefaultLongPassages, DefaultMinInnerArcFrac)
+            : this(DefaultRings, DefaultSectors, DefaultLoopFrac, DefaultCrossFrac, DefaultLongPassages, DefaultMinInnerArcLength, DefaultRingWidth)
         {
         }
 
         /// <summary>
-        /// 创建圆形编织式迷宫字段（兼容旧接口，使用默认最小内弧占比）
+        /// 创建圆形编织式迷宫字段（兼容旧接口，使用默认最小内弧长度和环宽）
         /// </summary>
         public CircularWeaveMazeField(int rings, int sectors, double loopFrac, double crossFrac, bool longPassages)
-            : this(rings, sectors, loopFrac, crossFrac, longPassages, DefaultMinInnerArcFrac)
+            : this(rings, sectors, loopFrac, crossFrac, longPassages, DefaultMinInnerArcLength, DefaultRingWidth)
         {
         }
 
@@ -71,11 +80,13 @@ namespace SimplexLab.WeaveMaze
         /// <param name="loopFrac">环比例（0~1）</param>
         /// <param name="crossFrac">交叉比例（0~1）</param>
         /// <param name="longPassages">是否启用长通道模式</param>
-        /// <param name="minInnerArcFrac">最小内弧占比（0~1），内弧长度占环宽的最小比例</param>
-        public CircularWeaveMazeField(int rings, int sectors, double loopFrac, double crossFrac, bool longPassages, double minInnerArcFrac)
+        /// <param name="minInnerArcLength">最小内弧长度（像素），内弧长度小于此值的环不参与迷宫生成</param>
+        /// <param name="ringWidth">环宽（像素），用于计算各环内弧长度</param>
+        public CircularWeaveMazeField(int rings, int sectors, double loopFrac, double crossFrac, bool longPassages, double minInnerArcLength, double ringWidth)
             : base(sectors, rings, loopFrac, crossFrac, longPassages)
         {
-            MinInnerArcFrac = minInnerArcFrac;
+            MinInnerArcLength = minInnerArcLength;
+            RingWidth = ringWidth;
         }
 
         /// <summary>

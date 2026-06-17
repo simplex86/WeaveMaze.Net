@@ -774,12 +774,17 @@ namespace SimplexLab.WeaveMaze.TApplication
             var loopFrac = circularMazeControl.LoopFraction;
             var crossFrac = circularMazeControl.CrossFraction;
             var longPassages = circularMazeControl.LongPassages;
-            var minInnerArcFrac = circularMazeControl.MinInnerArcFrac;
+            var minInnerArcLength = circularMazeControl.MinInnerArcLength;
 
             if (r <= 0) r = CircularWeaveMazeField.DefaultRings;
             if (s <= 0) s = CircularWeaveMazeField.DefaultSectors;
 
-            var field = new CircularWeaveMazeField(r, s, loopFrac, crossFrac, longPassages, minInnerArcFrac);
+            // 根据画布尺寸计算环宽，与渲染逻辑一致
+            double maxRadius = Math.Min(canvas.Bounds.Width, canvas.Bounds.Height) / 2.0 * 0.95;
+            double ringWidth = r > 0 ? maxRadius / r : CircularWeaveMazeField.DefaultRingWidth;
+            if (ringWidth <= 0) ringWidth = CircularWeaveMazeField.DefaultRingWidth;
+
+            var field = new CircularWeaveMazeField(r, s, loopFrac, crossFrac, longPassages, minInnerArcLength, ringWidth);
             mazeField = await mazeGenerator.GenerateAsync(field);
         }
 

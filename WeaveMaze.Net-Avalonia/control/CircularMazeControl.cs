@@ -25,16 +25,16 @@ namespace SimplexLab.WeaveMaze.TApplication
 
         public int MazeRings => (int)(rings.Value ?? 0);
         public int MazeSectors => (int)(sectors.Value ?? 0);
-        public double MinInnerArcFrac => (double)(minArcLength.Value ?? 0) / 100.0;
+        public double MinInnerArcLength => (double)(minArcLength.Value ?? 0);
         public double LoopFraction => (double)(loopFraction.Value ?? 0) / 100.0;
         public double CrossFraction => (double)(crossFraction.Value ?? 0) / 100.0;
         public bool LongPassages => longPassages.IsChecked == true;
 
-        public void SetReconstructionValues(int r, int s, double minArcFrac, double loopFrac, double crossFrac, bool longPass)
+        public void SetReconstructionValues(int r, int s, double minArc, double loopFrac, double crossFrac, bool longPass)
         {
             rings.Value = r;
             sectors.Value = s;
-            minArcLength.Value = (decimal)(minArcFrac * 100);
+            minArcLength.Value = (decimal)minArc;
             loopFraction.Value = (decimal)(loopFrac * 100);
             crossFraction.Value = (decimal)(crossFrac * 100);
             longPassages.IsChecked = longPass;
@@ -61,9 +61,9 @@ namespace SimplexLab.WeaveMaze.TApplication
             minArcLength = new NumericUpDown
             {
                 Minimum = 0,
-                Maximum = 100,
-                Value = (decimal)(CircularWeaveMazeField.DefaultMinInnerArcFrac * 100),
-                Increment = 5,
+                Maximum = 200,
+                Value = (decimal)CircularWeaveMazeField.DefaultMinInnerArcLength,
+                Increment = 1,
                 FormatString = "0",
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };

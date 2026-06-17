@@ -33,11 +33,14 @@ namespace SimplexLab.WeaveMaze.TApplication
             label3 = new System.Windows.Forms.Label();
             crossFraction = new System.Windows.Forms.NumericUpDown();
             label4 = new System.Windows.Forms.Label();
+            samples = new System.Windows.Forms.NumericUpDown();
+            labelSamples = new System.Windows.Forms.Label();
             longPassages = new System.Windows.Forms.CheckBox();
             filename = new System.Windows.Forms.TextBox();
             brower = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)loopFraction).BeginInit();
             ((System.ComponentModel.ISupportInitialize)crossFraction).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)samples).BeginInit();
             SuspendLayout();
             // 
             // label1
@@ -67,9 +70,9 @@ namespace SimplexLab.WeaveMaze.TApplication
             label3.Size = new System.Drawing.Size(92, 17);
             label3.TabIndex = 4;
             label3.Text = "Loop";
-            // 
+            //
             // crossFraction
-            // 
+            //
             crossFraction.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             crossFraction.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
             crossFraction.Location = new System.Drawing.Point(100, 63);
@@ -77,20 +80,39 @@ namespace SimplexLab.WeaveMaze.TApplication
             crossFraction.Size = new System.Drawing.Size(160, 23);
             crossFraction.TabIndex = 7;
             crossFraction.Value = new decimal(new int[] { 25, 0, 0, 0 });
-            // 
+            //
             // label4
-            // 
+            //
             label4.AutoSize = true;
             label4.Location = new System.Drawing.Point(3, 65);
             label4.Name = "label4";
             label4.Size = new System.Drawing.Size(91, 17);
             label4.TabIndex = 6;
             label4.Text = "Cross";
-            // 
+            //
+            // samples
+            //
+            samples.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            samples.Location = new System.Drawing.Point(100, 92);
+            samples.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
+            samples.Name = "samples";
+            samples.Size = new System.Drawing.Size(160, 23);
+            samples.TabIndex = 13;
+            samples.Value = new decimal(new int[] { 0, 0, 0, 0 });
+            //
+            // labelSamples
+            //
+            labelSamples.AutoSize = true;
+            labelSamples.Location = new System.Drawing.Point(3, 94);
+            labelSamples.Name = "labelSamples";
+            labelSamples.Size = new System.Drawing.Size(56, 17);
+            labelSamples.TabIndex = 12;
+            labelSamples.Text = "Samples";
+            //
             // longPassages
-            // 
+            //
             longPassages.AutoSize = true;
-            longPassages.Location = new System.Drawing.Point(3, 92);
+            longPassages.Location = new System.Drawing.Point(3, 121);
             longPassages.Name = "longPassages";
             longPassages.Size = new System.Drawing.Size(114, 21);
             longPassages.TabIndex = 9;
@@ -124,15 +146,18 @@ namespace SimplexLab.WeaveMaze.TApplication
             Controls.Add(brower);
             Controls.Add(filename);
             Controls.Add(longPassages);
+            Controls.Add(samples);
+            Controls.Add(labelSamples);
             Controls.Add(crossFraction);
             Controls.Add(label4);
             Controls.Add(loopFraction);
             Controls.Add(label3);
             Controls.Add(label1);
             Name = "RectangularMazeMaskControl";
-            Size = new System.Drawing.Size(260, 121);
+            Size = new System.Drawing.Size(260, 150);
             ((System.ComponentModel.ISupportInitialize)loopFraction).EndInit();
             ((System.ComponentModel.ISupportInitialize)crossFraction).EndInit();
+            ((System.ComponentModel.ISupportInitialize)samples).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -144,6 +169,8 @@ namespace SimplexLab.WeaveMaze.TApplication
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.NumericUpDown crossFraction;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.NumericUpDown samples;
+        private System.Windows.Forms.Label labelSamples;
         private System.Windows.Forms.CheckBox longPassages;
         private System.Windows.Forms.TextBox filename;
         private System.Windows.Forms.Button brower;

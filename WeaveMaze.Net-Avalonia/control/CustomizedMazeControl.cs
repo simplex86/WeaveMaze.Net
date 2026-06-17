@@ -12,6 +12,7 @@ namespace SimplexLab.WeaveMaze.TApplication
     {
         private NumericUpDown loopFraction;
         private NumericUpDown crossFraction;
+        private NumericUpDown samples;
         private CheckBox longPassages;
         private TextBox filename;
         private Button brower;
@@ -29,6 +30,7 @@ namespace SimplexLab.WeaveMaze.TApplication
         public string? FileName { get; private set; }
         public double LoopFraction => (double)(loopFraction.Value ?? 0) / 100.0;
         public double CrossFraction => (double)(crossFraction.Value ?? 0) / 100.0;
+        public int Samples => (int)(samples.Value ?? 0);
         public bool LongPassages => longPassages.IsChecked == true;
 
         public void SetReconstructionValues(int w, int h, double loopFrac, double crossFrac, bool longPass)
@@ -55,6 +57,16 @@ namespace SimplexLab.WeaveMaze.TApplication
                 Minimum = 0,
                 Maximum = 100,
                 Value = 25,
+                Increment = 1,
+                FormatString = "0",
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+            };
+
+            samples = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 10,
+                Value = 0,
                 Increment = 1,
                 FormatString = "0",
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -102,6 +114,15 @@ namespace SimplexLab.WeaveMaze.TApplication
                 });
             }
 
+            panel.Children.Add(new Grid
+            {
+                ColumnDefinitions = ColumnDefinitions.Parse("80,*"),
+                Children =
+                {
+                    new TextBlock { Text = "Samples", VerticalAlignment = VerticalAlignment.Center }.WithGridColumn(0),
+                    samples.WithGridColumn(1),
+                }
+            });
             panel.Children.Add(new Grid
             {
                 ColumnDefinitions = ColumnDefinitions.Parse("80,*"),

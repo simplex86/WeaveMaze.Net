@@ -760,8 +760,9 @@ namespace SimplexLab.WeaveMaze.TApplication
             var loopFrac = customizedMazeControl.LoopFraction;
             var crossFrac = customizedMazeControl.CrossFraction;
             var longPassages = customizedMazeControl.LongPassages;
+            var samples = customizedMazeControl.Samples;
 
-            var mask = CustomizedWeaveMazeMaskLoader.Load(filename);
+            var mask = CustomizedWeaveMazeMaskLoader.Load(filename, samples);
             var field = new CustomizedWeaveMazeField(mask, loopFrac, crossFrac, longPassages);
 
             mazeField = await mazeGenerator.GenerateAsync(field);
